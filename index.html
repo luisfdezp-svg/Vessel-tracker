@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VTrack">
+<title>Vessel Tracker Pro</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root{--bg:#0a0e17;--panel:#111827;--border:#1e293b;--text:#e2e8f0;--dim:#64748b;--muted:#334155;--accent:#0e7490;--cyan:#22d3ee;--green:#10b981;--red:#ef4444;--amber:#f59e0b}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,sans-serif;font-size:14px;height:100dvh;overflow:hidden}
+
+/* MOBILE LAYOUT */
+.app{display:flex;flex-direction:column;height:100%}
+#map{flex:1;z-index:1}
+.leaflet-container{background:#0c1a2e}
+.vessel-tooltip{background:#111827ee!important;border:1px solid #1e293b!important;color:#e2e8f0!important;font-family:-apple-system,sans-serif!important;font-size:11px!important;padding:3px 8px!important;border-radius:6px!important;box-shadow:0 2px 8px #00000066!important}
+.vessel-tooltip::before{border-right-color:#1e293b!important}
+.leaflet-popup-content-wrapper{background:#111827!important;color:#e2e8f0!important;border-radius:10px!important;border:1px solid #1e293b!important;box-shadow:0 4px 16px #00000088!important}
+.leaflet-popup-tip{background:#111827!important;border:1px solid #1e293b!important}
+.leaflet-popup-close-button{color:#64748b!important;font-size:18px!important}
+.sidebar{display:none}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:1000;padding:env(safe-area-inset-top) 12px 4px;background:linear-gradient(var(--bg),transparent);display:flex;align-items:center;justify-content:space-between;pointer-events:none}
+.topbar>*{pointer-events:auto}
+.topbar h1{font-size:15px;font-weight:700}
+.topbar .sub{font-size:9px;color:var(--dim)}
+.badge{font-size:9px;padding:2px 7px;border-radius:8px;font-weight:600}
+
+.panel{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:var(--panel);border-top:1px solid var(--border);border-radius:14px 14px 0 0;max-height:65vh;transition:transform .3s;padding-bottom:env(safe-area-inset-bottom)}
+.panel.min{transform:translateY(calc(100% - 44px - env(safe-area-inset-bottom)))}
+.handle{width:36px;height:4px;background:var(--muted);border-radius:2px;margin:8px auto 4px}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:0 14px 6px;cursor:pointer}
+.pbody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 14px;max-height:calc(65vh - 44px)}
+
+/* DESKTOP LAYOUT */
+@media(min-width:768px){
+  .app{flex-direction:row}
+  .topbar{display:none}
+  .panel{display:none}
+  .sidebar{display:flex;flex-direction:column;width:380px;min-width:380px;background:var(--panel);border-right:1px solid var(--border);height:100%;overflow:hidden;z-index:2}
+  .sb-head{padding:14px;border-bottom:1px solid var(--border)}
+  .sb-head h1{font-size:16px;font-weight:700}
+  .sb-body{flex:1;overflow-y:auto;padding:10px 14px;-webkit-overflow-scrolling:touch}
+}
+@media(min-width:1200px){.sidebar{width:420px;min-width:420px}}
+
+/* SHARED COMPONENTS */
+.tabs{display:flex;gap:3px;margin-bottom:8px}
+.tab{flex:1;text-align:center;background:var(--border);border:none;color:var(--dim);border-radius:8px;padding:7px;font-family:inherit;font-size:10px;font-weight:600;text-transform:uppercase;cursor:pointer;-webkit-appearance:none;letter-spacing:.03em}
+.tab.on{background:var(--accent);color:#fff}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:7px}
+.label{font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+input,select,textarea{display:block;width:100%;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:13px;font-family:inherit;outline:none;-webkit-appearance:none;margin-bottom:5px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+textarea{resize:vertical;min-height:60px;font-size:12px}
+button{display:block;width:100%;border-radius:8px;padding:10px;font-family:inherit;font-size:12px;font-weight:600;border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;margin-bottom:4px}
+.bg{background:#065f46;color:var(--green)}.br{background:#7f1d1d;color:var(--red)}
+.ba{background:#164e63;color:var(--cyan)}.bw{background:#78350f;color:var(--amber)}
+.by{background:var(--border);color:#94a3b8}
+.row{display:flex;gap:5px}.row>*{flex:1}
+.vi{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.vi:hover{background:var(--border);border-radius:6px;margin:0 -4px;padding:5px 4px}
+.vn{font-size:11px;font-weight:600}.vm{font-size:9px;color:var(--dim)}
+.vr{background:none;border:none;color:var(--red);font-size:14px;padding:4px 6px;width:auto;cursor:pointer}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.ai{padding:6px 0;border-bottom:1px solid var(--border);font-size:10px}
+.at{font-size:8px;color:var(--dim);margin-top:1px}
+.empty{color:var(--muted);font-size:11px;padding:8px;text-align:center}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
+.dl{font-size:7px;color:var(--dim);text-transform:uppercase;margin-bottom:1px;letter-spacing:.05em}
+.dv{font-size:12px;font-weight:600}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:11px}
+.toggle{position:relative;width:36px;height:20px;background:var(--border);border-radius:10px;cursor:pointer;display:inline-block;vertical-align:middle;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--text);border-radius:50%;transition:transform .2s}
+.toggle.on::after{transform:translateX(16px)}
+.log-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px;max-height:120px;overflow-y:auto;font-family:monospace;font-size:8px;line-height:1.5}
+.log-box .e{color:var(--red)}.log-box .o{color:var(--green)}.log-box .d{color:var(--cyan)}.log-box .w{color:var(--amber)}.log-box .g{color:var(--dim)}
+.db-table{width:100%;font-size:9px;border-collapse:collapse;margin-top:6px}
+.db-table th{background:var(--border);color:var(--dim);padding:4px;text-align:left;font-weight:600;position:sticky;top:0}
+.db-table td{padding:3px 4px;border-bottom:1px solid var(--border);color:var(--text)}
+.trigger-row{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px}
+.chip{display:inline-block;font-size:8px;padding:2px 6px;border-radius:4px;margin:1px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR (Desktop) -->
+<div class="sidebar">
+  <div class="sb-head">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div><h1>⚓ Vessel Tracker</h1><div style="font-size:9px;color:var(--dim)">AIS + Manual · <span id="sD">OFF</span></div></div>
+      <span class="badge" id="sBD" style="background:#7f1d1d;color:var(--red)">OFF</span>
+    </div>
+  </div>
+  <div class="sb-body" id="sbContent"></div>
+</div>
+
+<!-- MAP -->
+<div id="map" style="flex:1"></div>
+
+<!-- TOPBAR (Mobile) -->
+<div class="topbar">
+  <div><h1>⚓ Vessel Tracker</h1><div class="sub"><span id="sM">OFF</span></div></div>
+  <span class="badge" id="sBM" style="background:#7f1d1d;color:var(--red)">OFF</span>
+</div>
+
+<!-- PANEL (Mobile) -->
+<div class="panel min" id="panel">
+  <div class="handle"></div>
+  <div class="phead" onclick="togglePanel()"><h2>Panel</h2><span style="font-size:18px;color:var(--dim)" id="pChev">▾</span></div>
+  <div class="pbody" id="mobileContent"></div>
+</div>
+
+</div>
+
+<!-- SHARED CONTENT TEMPLATE -->
+<template id="contentTpl">
+<div class="tabs" id="mainTabs">
+  <button class="tab on" onclick="sTab('cfg')">Config</button>
+  <button class="tab" onclick="sTab('fleet')">Flota</button>
+  <button class="tab" onclick="sTab('db')">BD</button>
+  <button class="tab" onclick="sTab('email')">Email</button>
+  <button class="tab" onclick="sTab('log')">Log</button>
+</div>
+
+<!-- CONFIG -->
+<div id="tCfg">
+  <div class="card">
+    <div class="label">AISstream API Key</div>
+    <input type="text" id="apikey" placeholder="API key (gratis en aisstream.io)" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="card">
+    <div class="label">Buques (<span id="vc">0</span>/20)</div>
+    <div class="row">
+      <input type="text" id="mmsiIn" placeholder="MMSI" inputmode="numeric" autocomplete="off">
+      <input type="text" id="nameIn" placeholder="Nombre" autocomplete="off">
+    </div>
+    <button class="ba" onclick="addV()">+ Añadir</button>
+    <div id="vList" style="max-height:180px;overflow-y:auto"></div>
+  </div>
+  <div class="card">
+    <div class="label">📍 Posición manual</div>
+    <select id="manMmsi"></select>
+    <div class="row"><input type="text" id="manLat" placeholder="Lat" inputmode="decimal"><input type="text" id="manLon" placeholder="Lon" inputmode="decimal"></div>
+    <div class="row"><input type="text" id="manSog" placeholder="SOG" inputmode="decimal"><input type="text" id="manCog" placeholder="COG" inputmode="decimal"></div>
+    <button class="bw" onclick="manPos()">📍 Actualizar</button>
+  </div>
+  <div class="card">
+    <div class="label">Geofence</div>
+    <div class="row"><input type="text" id="gfLa" placeholder="Lat" inputmode="decimal"><input type="text" id="gfLo" placeholder="Lon" inputmode="decimal"></div>
+    <div class="row"><input type="text" id="gfR" placeholder="Radio NM" inputmode="decimal"><input type="text" id="gfN" placeholder="Nombre"></div>
+    <button class="by" onclick="addGF()">+ Geofence</button>
+    <div id="gfList"></div>
+  </div>
+  <div class="card">
+    <div class="setting-row"><span>Anchor Watch</span><div class="toggle" id="tAW" onclick="S.aw=!S.aw;syncT();saveCfg()"></div></div>
+    <div class="setting-row"><span>Sonido</span><div class="toggle on" id="tSnd" onclick="S.snd=!S.snd;syncT();saveCfg()"></div></div>
+    <div class="setting-row"><span>Auto-reconexión</span><div class="toggle on" id="tRec" onclick="S.rec=!S.rec;syncT();saveCfg()"></div></div>
+  </div>
+  <div class="row">
+    <button class="bg" id="goBtn" onclick="conn()">▶ Conectar</button>
+    <button class="br" id="stopBtn" onclick="disc()" style="display:none">■ Parar</button>
+  </div>
+  <button class="by" onclick="fitAll()">⊡ Ver todos los buques</button>
+</div>
+
+<!-- FLEET -->
+<div id="tFleet" style="display:none"></div>
+
+<!-- DATABASE -->
+<div id="tDb" style="display:none">
+  <div class="card">
+    <div class="label">Registros de posición (auto cada 4h navegando)</div>
+    <div style="font-size:9px;color:var(--dim);margin-bottom:6px">Amarrado/fondeado: registra inicio y fin</div>
+    <div class="row">
+      <button class="by" onclick="exportDb()">📥 Exportar CSV</button>
+      <button class="by" onclick="if(confirm('¿Borrar todos los registros?')){DB=[];saveDb();rDb();}">🗑 Borrar</button>
+    </div>
+    <div style="max-height:250px;overflow:auto;margin-top:6px" id="dbTable"></div>
+    <div style="font-size:9px;color:var(--dim);margin-top:4px" id="dbCount"></div>
+  </div>
+</div>
+
+<!-- EMAIL -->
+<div id="tEmail" style="display:none">
+  <div class="card">
+    <div class="label">Configuración EmailJS (envío automático)</div>
+    <div style="font-size:9px;color:var(--dim);margin-bottom:6px">Regístrate gratis en emailjs.com (200 emails/mes)</div>
+    <input type="text" id="ejPub" placeholder="Public Key (EmailJS)">
+    <input type="text" id="ejSvc" placeholder="Service ID (ej: service_xxx)">
+    <input type="text" id="ejTpl" placeholder="Template ID (ej: template_xxx)">
+    <input type="text" id="ejTo" placeholder="Email destino" inputmode="email">
+    <button class="by" onclick="testEmail()">📧 Enviar test</button>
+  </div>
+  <div class="card">
+    <div class="label">Triggers de email</div>
+    <div style="font-size:9px;color:var(--dim);margin-bottom:6px">Selecciona cuándo enviar notificación</div>
+    <div class="setting-row"><span>Entrada/salida geofence</span><div class="toggle on" id="tEGeo" onclick="S.eGeo=!S.eGeo;syncT();saveCfg()"></div></div>
+    <div class="setting-row"><span>Cambio velocidad &gt;3kn</span><div class="toggle" id="tESpd" onclick="S.eSpd=!S.eSpd;syncT();saveCfg()"></div></div>
+    <div class="setting-row"><span>Cambio estado (nav↔fondeo)</span><div class="toggle on" id="tESt" onclick="S.eSt=!S.eSt;syncT();saveCfg()"></div></div>
+    <div class="setting-row"><span>Deriva en fondeo</span><div class="toggle" id="tEAn" onclick="S.eAn=!S.eAn;syncT();saveCfg()"></div></div>
+    <div class="setting-row"><span>Nuevo registro BD (4h)</span><div class="toggle" id="tEDb" onclick="S.eDb=!S.eDb;syncT();saveCfg()"></div></div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div id="tLog" style="display:none">
+  <div class="log-box" id="logBox"><span class="g">Listo</span></div>
+  <button class="by" onclick="exportCSV()" style="margin-top:4px">Exportar posiciones CSV</button>
+</div>
+</template>
+
+<script>
+// ===== STATE =====
+var ws=null,on=false,mc=0;
+var TV=[],GF=[],V={},HI={},AL=[],AP={},PS={},DB=[],STATES={};
+var S={aw:false,snd:true,rec:true,eGeo:true,eSpd:false,eSt:true,eAn:false,eDb:false};
+var EJ={pub:'',svc:'',tpl:'',to:''};
+var map,markers={},trails={},gfCircles=[];
+var CC=['#22d3ee','#10b981','#f59e0b','#a78bfa','#ef4444','#f472b6','#fb923c','#34d399','#818cf8','#fbbf24','#38bdf8','#e879f9','#4ade80','#facc15','#2dd4bf','#c084fc','#fb7185','#a3e635','#67e8f9','#fca5a5'];
+var NS={0:'Navegando',1:'Fondeado',2:'Sin gobierno',3:'Restringido',5:'Amarrado',7:'Faenando',8:'A vela',15:'—'};
+var DB_INTERVAL=4*60*60*1000; // 4 hours
+var lastDbSnap={};
+
+// ===== AUDIO =====
+var actx;
+function beep(f,d){if(!S.snd)return;try{if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();var o=actx.createOscillator(),g=actx.createGain();o.connect(g);g.connect(actx.destination);o.frequency.value=f;g.gain.setValueAtTime(.12,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.start();o.stop(actx.currentTime+d);}catch(e){}}
+
+// ===== MAP =====
+map=L.map('map',{zoomControl:false}).setView([41.3,2.15],6);
+L.control.zoom({position:'topright'}).addTo(map);
+var dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'});
+var light=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19});
+var sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+dark.addTo(map);
+L.control.layers({'🌙 Oscuro':dark,'☀️ Claro':light,'🛰 Satélite':sat},null,{position:'topright',collapsed:true}).addTo(map);
+
+function vIcon(h,c){var r=h||0;return L.divIcon({html:'<svg width="22" height="22" viewBox="0 0 24 24"><g transform="rotate('+r+' 12 12)"><polygon points="12,1 20,22 12,17 4,22" fill="'+c+'" stroke="#fff" stroke-width=".7" opacity=".9"/></g></svg>',iconSize:[22,22],iconAnchor:[11,11],className:''});}
+
+function updMarker(v){
+  var mm=v.mm;if(!mm||!v.lat)return;
+  var i=TV.findIndex(function(t){return t.m===mm}),col=CC[(i>=0?i:0)%20];
+  if(markers[mm]){markers[mm].setLatLng([v.lat,v.lon]);markers[mm].setIcon(vIcon(v.hdg||v.cog,col));}
+  else markers[mm]=L.marker([v.lat,v.lon],{icon:vIcon(v.hdg||v.cog,col)}).addTo(map);
+  markers[mm].off('click').on('click',function(){zoomTo(mm);});
+
+  // Permanent name label
+  if(markers[mm].getTooltip())markers[mm].unbindTooltip();
+  markers[mm].bindTooltip('<b style="color:'+col+'">'+(v.name||mm)+'</b><br><span style="color:#94a3b8;font-size:10px">'+(v.sog||0)+' kn</span>',{permanent:true,direction:'right',offset:[12,0],className:'vessel-tooltip'});
+
+  // Full info popup on click
+  var status=NS[v.st]||v.st||'—';
+  var age=v.up?Math.floor((Date.now()-v.up)/1000):null;
+  var ageStr=age!==null?(age<60?age+'s':age<3600?Math.floor(age/60)+'m':Math.floor(age/3600)+'h')+' ago':'';
+  var p='<div style="font-family:-apple-system,sans-serif;min-width:200px">'
+    +'<div style="font-size:14px;font-weight:700;color:'+col+';margin-bottom:4px">'+(v.name||mm)+'</div>'
+    +'<table style="font-size:11px;color:#e2e8f0;border-collapse:collapse;width:100%">'
+    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">MMSI</td><td>'+mm+'</td></tr>'
+    +(v.imo?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">IMO</td><td>'+v.imo+'</td></tr>':'')
+    +(v.cs?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Call Sign</td><td>'+v.cs+'</td></tr>':'')
+    +(v.type?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Tipo</td><td>'+v.type+'</td></tr>':'')
+    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Posición</td><td>'+v.lat.toFixed(5)+'°N '+v.lon.toFixed(5)+'°E</td></tr>'
+    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">SOG</td><td><b>'+(v.sog||0)+' kn</b></td></tr>'
+    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">COG</td><td>'+(v.cog||0)+'°</td></tr>'
+    +(v.hdg?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Heading</td><td>'+v.hdg+'°</td></tr>':'')
+    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Estado</td><td>'+status+'</td></tr>'
+    +(v.dest?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Destino</td><td><b style="color:#f59e0b">'+v.dest+'</b></td></tr>':'')
+    +(v.eta?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">ETA</td><td><b style="color:#22d3ee">'+v.eta+'</b></td></tr>':'')
+    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Fuente</td><td>'+(v.src==='ais'?'🔴 AIS live':'📍 Manual')+'</td></tr>'
+    +(ageStr?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Actualizado</td><td>'+ageStr+'</td></tr>':'')
+    +'</table></div>';
+  markers[mm].bindPopup(p,{maxWidth:280});
+
+  if(!HI[mm])HI[mm]=[];
+  var ll=HI[mm].map(function(p){return[p.lat,p.lon]});
+  if(ll.length>1){if(trails[mm])trails[mm].setLatLngs(ll);else trails[mm]=L.polyline(ll,{color:col,weight:2,opacity:.4,dashArray:'4 4'}).addTo(map);}
+}
+
+function zoomTo(mm){var v=V[mm];if(v&&v.lat)map.flyTo([v.lat,v.lon],13,{duration:1});}
+function fitAll(){var pts=Object.values(V).filter(function(v){return v.lat}).map(function(v){return[v.lat,v.lon]});if(pts.length===1)map.flyTo(pts[0],10);else if(pts.length>1)map.fitBounds(pts,{padding:[60,60],maxZoom:12});}
+
+// ===== HAVERSINE =====
+function dNM(a,b,c,d){var R=3440.065,x=Math.PI/180,dl=(c-a)*x,dn=(d-b)*x;var s=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a*x)*Math.cos(c*x)*Math.sin(dn/2)*Math.sin(dn/2);return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));}
+
+// ===== PERSISTENCE =====
+function load(){try{
+  var d=localStorage.getItem('vt6');if(d){var o=JSON.parse(d);TV=o.tv||[];GF=o.gf||[];S=Object.assign(S,o.s||{});EJ=Object.assign(EJ,o.ej||{});V=o.v||{};HI=o.hi||{};DB=o.db||[];STATES=o.st||{};lastDbSnap=o.lds||{};}
+}catch(e){}}
+function saveCfg(){try{localStorage.setItem('vt6',JSON.stringify({tv:TV,gf:GF,s:S,ej:EJ,v:V,hi:HI,db:DB,st:STATES,lds:lastDbSnap}));}catch(e){}}
+function saveAll(){saveCfg();}
+
+// ===== SYNC TOGGLES =====
+function syncT(){
+  var ids={tAW:'aw',tSnd:'snd',tRec:'rec',tEGeo:'eGeo',tESpd:'eSpd',tESt:'eSt',tEAn:'eAn',tEDb:'eDb'};
+  Object.keys(ids).forEach(function(id){var el=document.getElementById(id);if(el)el.className='toggle'+(S[ids[id]]?' on':'');});
+}
+
+// ===== VESSELS =====
+function addV(){
+  var m=document.getElementById('mmsiIn').value.trim(),n=document.getElementById('nameIn').value.trim();
+  if(!m||TV.find(function(x){return x.m===m})||TV.length>=20)return;
+  TV.push({m:m,n:n||m});
+  document.getElementById('mmsiIn').value='';document.getElementById('nameIn').value='';
+  saveCfg();rVL();updMS();
+}
+function rmV(m){
+  TV=TV.filter(function(x){return x.m!==m});
+  if(markers[m]){map.removeLayer(markers[m]);delete markers[m];}
+  if(trails[m]){map.removeLayer(trails[m]);delete trails[m];}
+  delete V[m];delete HI[m];saveCfg();rVL();updMS();
+}
+function rVL(){
+  var e=document.getElementById('vList');document.getElementById('vc').textContent=TV.length;
+  if(!TV.length){e.innerHTML='';return;}
+  e.innerHTML=TV.map(function(v,i){
+    var vd=V[v.m],hasPos=vd&&vd.lat;
+    return '<div class="vi" onclick="zoomTo(\''+v.m+'\')"><div><div class="vn" style="color:'+CC[i%20]+'">'+(vd?vd.name:v.n)+'</div><div class="vm">'+v.m+(hasPos?(vd.src==='ais'?' 🔴':' 📍'):'')+'</div></div><button class="vr" onclick="event.stopPropagation();rmV(\''+v.m+'\')">✕</button></div>';
+  }).join('');
+}
+function updMS(){
+  var s=document.getElementById('manMmsi');if(!s)return;
+  s.innerHTML=TV.map(function(v){return'<option value="'+v.m+'">'+(V[v.m]?V[v.m].name:v.n)+'</option>'}).join('');
+}
+
+// ===== MANUAL POSITION =====
+function manPos(){
+  var mm=document.getElementById('manMmsi').value;
+  var lat=parseFloat(document.getElementById('manLat').value),lon=parseFloat(document.getElementById('manLon').value);
+  if(!mm||isNaN(lat)||isNaN(lon))return;
+  var sog=parseFloat(document.getElementById('manSog').value)||0,cog=parseFloat(document.getElementById('manCog').value)||0;
+  var name=V[mm]?V[mm].name:(TV.find(function(t){return t.m===mm})||{}).n||mm;
+  processUpdate(mm,name,lat,lon,sog,cog,null,null,'manual');
+  ['manLat','manLon','manSog','manCog'].forEach(function(id){document.getElementById(id).value='';});
+  log('📍 Manual: '+name,'o');
+}
+
+// ===== GEOFENCE =====
+function addGF(){
+  var lat=parseFloat(document.getElementById('gfLa').value),lon=parseFloat(document.getElementById('gfLo').value);
+  var rad=parseFloat(document.getElementById('gfR').value),nm=document.getElementById('gfN').value.trim()||'Zona';
+  if(isNaN(lat)||isNaN(lon)||isNaN(rad)||rad<=0)return;
+  GF.push({lat:lat,lon:lon,rad:rad,name:nm,id:Date.now()});
+  ['gfLa','gfLo','gfR','gfN'].forEach(function(id){document.getElementById(id).value='';});
+  saveCfg();rGF();drawGF();
+}
+function rmGF(id){GF=GF.filter(function(g){return g.id!==id});saveCfg();rGF();drawGF();}
+function rGF(){var e=document.getElementById('gfList');e.innerHTML=GF.map(function(g){return'<div class="vi"><div><div class="vn" style="color:var(--amber)">'+g.name+'</div><div class="vm">'+g.rad+'NM</div></div><button class="vr" onclick="event.stopPropagation();rmGF('+g.id+')">✕</button></div>'}).join('');}
+function drawGF(){gfCircles.forEach(function(c){map.removeLayer(c)});gfCircles=[];GF.forEach(function(g){var c=L.circle([g.lat,g.lon],{radius:g.rad*1852,color:'#f59e0b',fillColor:'#f59e0b',fillOpacity:.06,weight:1.5,dashArray:'6 4'}).addTo(map);c.bindTooltip(g.name,{permanent:true,direction:'center'});gfCircles.push(c);});}
+
+// ===== CENTRAL UPDATE PROCESSOR =====
+function processUpdate(mm,name,lat,lon,sog,cog,hdg,st,src){
+  // Checks
+  checkGeo(mm,lat,lon,name);
+  checkAnch(mm,lat,lon,name,st);
+  checkSpd(mm,sog,name);
+  checkStatus(mm,name,st);
+
+  V[mm]=Object.assign(V[mm]||{},{mm:mm,name:name,lat:lat,lon:lon,sog:sog,cog:cog,hdg:hdg,st:st,src:src,up:Date.now()});
+  if(!HI[mm])HI[mm]=[];
+  HI[mm].push({lat:lat,lon:lon,sog:sog,cog:cog,ts:Date.now()});
+  if(HI[mm].length>300)HI[mm]=HI[mm].slice(-300);
+  updMarker(V[mm]);
+
+  // DB snapshot every 4h if navigating
+  dbSnapshot(mm,name,lat,lon,sog,cog,st);
+}
+
+// ===== STATUS TRACKING =====
+function checkStatus(mm,name,newSt){
+  var prev=STATES[mm];
+  var isMoving=newSt!==1&&newSt!==5&&newSt!==null;
+  var wasMoving=prev&&prev.moving;
+
+  if(prev===undefined){STATES[mm]={moving:isMoving,since:Date.now()};return;}
+
+  if(isMoving&&!wasMoving){
+    // Was moored/anchored, now navigating
+    var dur=Date.now()-prev.since;
+    var hrs=Math.round(dur/3600000*10)/10;
+    dbRecord(mm,name,'STATUS','Fondeo/amarre fin ('+hrs+'h)');
+    if(S.eSt)sendEmail('🚢 '+name+' zarpó ('+hrs+'h en fondeo/amarre)');
+    aa('info','🚢',name+' zarpó');
+    STATES[mm]={moving:true,since:Date.now()};
+  }else if(!isMoving&&wasMoving){
+    // Was navigating, now moored/anchored
+    dbRecord(mm,name,'STATUS','Inicio fondeo/amarre');
+    if(S.eSt)sendEmail('⚓ '+name+' fondeó/amarró');
+    aa('info','⚓',name+' fondeó/amarró');
+    STATES[mm]={moving:false,since:Date.now()};
+  }
+}
+
+// ===== DB SNAPSHOTS =====
+function dbSnapshot(mm,name,lat,lon,sog,cog,st){
+  var isMoving=st!==1&&st!==5;
+  if(!isMoving)return; // Only snapshot when navigating
+  var now=Date.now();
+  var last=lastDbSnap[mm]||0;
+  if(now-last<DB_INTERVAL)return;
+  lastDbSnap[mm]=now;
+  dbRecord(mm,name,'NAV',lat.toFixed(4)+'°N '+lon.toFixed(4)+'°E '+sog+'kn '+(cog||0)+'°'+(V[mm]&&V[mm].dest?' → '+V[mm].dest:''));
+  if(S.eDb)sendEmail('📊 '+name+' pos: '+lat.toFixed(4)+'° '+lon.toFixed(4)+'° '+sog+'kn');
+}
+function dbRecord(mm,name,type,detail){
+  var v=V[mm]||{};
+  DB.push({ts:Date.now(),mm:mm,name:name,type:type,lat:v.lat||0,lon:v.lon||0,sog:v.sog||0,cog:v.cog||0,dest:v.dest||'',detail:detail});
+  if(DB.length>2000)DB=DB.slice(-2000);
+  saveAll();rDb();
+}
+
+// ===== CHECKS =====
+function checkGeo(mm,lat,lon,name){GF.forEach(function(g){var d=dNM(lat,lon,g.lat,g.lon),k=mm+'_'+g.id,was=AP[k],is=d<=g.rad;if(is&&!was){aa('geo','🟡',name+' ENTRÓ '+g.name);if(S.eGeo)sendEmail('🟡 '+name+' entró en '+g.name);}if(!is&&was){aa('geo','🔴',name+' SALIÓ '+g.name);if(S.eGeo)sendEmail('🔴 '+name+' salió de '+g.name);}AP[k]=is;});}
+function checkAnch(mm,lat,lon,name,st){if(!S.aw||st!==1)return;var p=V[mm];if(p&&p.lat&&p.st===1){var d=dNM(p.lat,p.lon,lat,lon);if(d>.1){aa('anchor','⚓',name+' DERIVA '+d.toFixed(2)+'NM');if(S.eAn)sendEmail('⚓ '+name+' deriva en fondeo: '+d.toFixed(2)+' NM');}}}
+function checkSpd(mm,sog,name){var p=PS[mm];if(p!==undefined&&Math.abs(sog-p)>3){aa('speed','⚡',name+': '+p.toFixed(1)+'→'+sog.toFixed(1)+'kn');if(S.eSpd)sendEmail('⚡ '+name+' velocidad: '+p.toFixed(1)+'→'+sog.toFixed(1)+' kn');}PS[mm]=sog;}
+
+// ===== EMAIL =====
+function sendEmail(msg){
+  if(!EJ.pub||!EJ.svc||!EJ.tpl||!EJ.to)return;
+  try{
+    emailjs.send(EJ.svc,EJ.tpl,{to_email:EJ.to,subject:'VesselTracker Alert',message:msg,time:new Date().toLocaleString('es-ES')},{publicKey:EJ.pub});
+    log('📧 Email enviado: '+msg.substring(0,60),'o');
+  }catch(e){log('📧 Error email: '+e.message,'e');}
+}
+function testEmail(){
+  saveEmailCfg();
+  sendEmail('🧪 Test — Vessel Tracker funcionando correctamente a las '+new Date().toLocaleString('es-ES'));
+}
+function saveEmailCfg(){
+  EJ.pub=document.getElementById('ejPub').value.trim();
+  EJ.svc=document.getElementById('ejSvc').value.trim();
+  EJ.tpl=document.getElementById('ejTpl').value.trim();
+  EJ.to=document.getElementById('ejTo').value.trim();
+  saveCfg();
+}
+
+// ===== ALERTS =====
+function aa(t,i,m){AL.unshift({t:t,i:i,m:m,ts:Date.now()});if(AL.length>200)AL.length=200;if(t!=='info'){beep(880,.15);setTimeout(function(){beep(1100,.15)},180);if(navigator.vibrate)navigator.vibrate(200);}rAL();}
+function rAL(){var e=document.getElementById('alC');if(!e)return;if(!AL.length){e.innerHTML='<div class="empty">Sin alertas</div>';return;}e.innerHTML=AL.slice(0,40).map(function(a){var c=a.t==='geo'?'var(--amber)':a.t==='speed'?'var(--cyan)':a.t==='anchor'?'var(--red)':'var(--dim)';return'<div class="ai"><span class="dot" style="background:'+c+'"></span>'+a.i+' '+a.m+'<div class="at">'+new Date(a.ts).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div></div>'}).join('');}
+
+// ===== LOG =====
+function log(m,c){var b=document.getElementById('logBox');if(!b)return;var l=document.createElement('div');l.className=c||'g';l.textContent=new Date().toLocaleTimeString('es-ES')+' '+m;b.appendChild(l);b.scrollTop=b.scrollHeight;while(b.children.length>200)b.removeChild(b.firstChild);}
+
+// ===== DB RENDER =====
+function rDb(){
+  var e=document.getElementById('dbTable');if(!e)return;
+  document.getElementById('dbCount').textContent=DB.length+' registros';
+  if(!DB.length){e.innerHTML='<div class="empty">Sin registros</div>';return;}
+  var h='<table class="db-table"><thead><tr><th>Fecha</th><th>Buque</th><th>Tipo</th><th>Detalle</th></tr></thead><tbody>';
+  DB.slice(-50).reverse().forEach(function(r){
+    h+='<tr><td>'+new Date(r.ts).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.detail+'</td></tr>';
+  });
+  h+='</tbody></table>';e.innerHTML=h;
+}
+function exportDb(){
+  var s='Timestamp,MMSI,Name,Type,Lat,Lon,SOG,COG,Destination,Detail\n';
+  DB.forEach(function(r){s+=new Date(r.ts).toISOString()+','+r.mm+','+r.name+','+r.type+','+r.lat+','+r.lon+','+r.sog+','+r.cog+',"'+r.dest+'","'+r.detail+'"\n';});
+  dl('vessel_db.csv',s);
+}
+function exportCSV(){
+  var s='MMSI,Name,Timestamp,Lat,Lon,SOG,COG,Source\n';
+  for(var mm in HI){var nm=V[mm]?V[mm].name:mm;var src=V[mm]?V[mm].src:'?';HI[mm].forEach(function(p){s+=mm+','+nm+','+new Date(p.ts).toISOString()+','+p.lat.toFixed(6)+','+p.lon.toFixed(6)+','+(p.sog||'')+','+(p.cog||'')+','+src+'\n';});}
+  dl('vessel_positions.csv',s);
+}
+function dl(n,c){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download=n;a.click();}
+
+// ===== AIS CONNECT =====
+function conn(){
+  var key=document.getElementById('apikey').value.trim();
+  if(!key){log('⚠ API key','w');return;}
+  if(!TV.length){log('⚠ Añade buques','w');return;}
+  saveCfg();disc();
+  try{ws=new WebSocket('wss://stream.aisstream.io/v0/stream');}catch(e){log('Error: '+e.message,'e');return;}
+  ws.onopen=function(){
+    ws.send(JSON.stringify({Apikey:key,BoundingBoxes:[[[25,-15],[65,45]]],FilterMessageTypes:['PositionReport','ShipStaticData']}));
+    on=true;ui();log('✓ Conectado — buscando '+TV.length+' buques: '+TV.map(function(t){return t.m}).join(', '),'o');
+  };
+  ws.onmessage=function(ev){mc++;if(mc===1)log('Primer msg recibido','o');if(mc%500===0)ui();if(ev.data instanceof Blob){var r=new FileReader();r.onload=function(){proc(r.result)};r.readAsText(ev.data);}else proc(ev.data);};
+  ws.onerror=function(){log('✕ Error WS','e');};
+  ws.onclose=function(e){var was=on;on=false;ui();log('WS cerrado ('+e.code+')','e');if(S.rec&&was)setTimeout(function(){if(!on)conn()},5000);};
+}
+function disc(){if(ws){ws.close();ws=null;}on=false;ui();}
+
+function proc(raw){
+  try{
+    var d=JSON.parse(raw);if(d.ERROR){log('⚠ '+JSON.stringify(d),'e');return;}
+    var tp=d.MessageType,mt=d.MetaData,mm=String(mt&&mt.MMSI||'');
+    if(!mm)return;
+    if(!TV.find(function(t){return t.m===mm})){
+      if(mc%2000===0)log('📊 '+mc+' msgs, buscando tus '+TV.length+' buques (último MMSI: '+mm+')','g');
+      return;
+    }
+    log('🎯 ¡ENCONTRADO '+((mt.ShipName||'').trim()||mm)+'!','o');
+    if(tp==='PositionReport'){
+      var p=d.Message.PositionReport;if(!p)return;
+      var nm=(mt.ShipName||'').trim()||mm;
+      processUpdate(mm,nm,p.Latitude,p.Longitude,p.Sog,p.Cog,p.TrueHeading===511?null:p.TrueHeading,p.NavigationalStatus,'ais');
+      if(mc%30===0){saveAll();rVL();rFleet();}
+      log('📡 '+nm+' '+p.Latitude.toFixed(4)+'° '+p.Longitude.toFixed(4)+'° '+p.Sog.toFixed(1)+'kn','d');
+    }else if(tp==='ShipStaticData'){
+      var sd=d.Message.ShipStaticData;if(!sd)return;
+      var eta=null;
+      if(sd.Eta&&(sd.Eta.Month||sd.Eta.Day)){
+        var now=new Date();
+        var y=now.getFullYear();
+        var mo=sd.Eta.Month||1,da=sd.Eta.Day||1,hr=sd.Eta.Hour||0,mi=sd.Eta.Minute||0;
+        if(mo<now.getMonth()+1)y++; // next year
+        eta=String(da).padStart(2,'0')+'/'+String(mo).padStart(2,'0')+'/'+y+' '+String(hr).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+      }
+      V[mm]=Object.assign(V[mm]||{},{mm:mm,name:(mt.ShipName||'').trim()||mm,imo:sd.ImoNumber,cs:sd.CallSign,dest:sd.Destination,eta:eta,type:sd.Type,src:'ais'});
+      if(V[mm].lat)updMarker(V[mm]);
+      rVL();rFleet();
+    }
+  }catch(e){}
+}
+
+// ===== UI =====
+function ui(){
+  ['sM','sD'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=on?'LIVE — '+mc+' msg':'OFF';});
+  ['sBM','sBD'].forEach(function(id){var e=document.getElementById(id);if(e){e.textContent=on?'LIVE':'OFF';e.style.background=on?'#065f46':'#7f1d1d';e.style.color=on?'var(--green)':'var(--red)';}});
+  var go=document.getElementById('goBtn'),st=document.getElementById('stopBtn');
+  if(go)go.style.display=on?'none':'block';
+  if(st)st.style.display=on?'block':'none';
+}
+
+// ===== FLEET TAB =====
+function rFleet(){
+  var e=document.getElementById('tFleet');if(!e)return;
+  if(!TV.length){e.innerHTML='<div class="empty">Añade buques</div>';return;}
+  e.innerHTML=TV.map(function(t,i){
+    var v=V[t.m]||{},col=CC[i%20];
+    var h='<div class="card" style="border-left:3px solid '+col+';cursor:pointer" onclick="zoomTo(\''+t.m+'\')">';
+    h+='<div style="display:flex;justify-content:space-between"><div><div style="font-size:13px;font-weight:700;color:'+col+'">'+(v.name||t.n)+'</div>';
+    h+='<div class="vm">'+t.m+(v.imo?' · '+v.imo:'')+(v.src==='ais'?' 🔴':v.lat?' 📍':'')+'</div></div>';
+    if(v.up){var a=Math.floor((Date.now()-v.up)/1000);h+='<div style="font-size:9px;color:var(--dim)">'+(a<60?a+'s':a<3600?Math.floor(a/60)+'m':Math.floor(a/3600)+'h')+' ago</div>';}
+    h+='</div>';
+    if(v.lat){
+      h+='<div class="dg">';
+      h+='<div><div class="dl">Posición</div><div class="dv">'+v.lat.toFixed(4)+'° '+v.lon.toFixed(4)+'°</div></div>';
+      h+='<div><div class="dl">SOG/COG</div><div class="dv" style="color:'+col+'">'+(v.sog||0)+' kn '+(v.cog||0)+'°</div></div>';
+      h+='</div>';
+      if(v.dest)h+='<div style="font-size:10px;color:var(--dim);margin-top:3px">Destino: <b style="color:var(--amber)">'+v.dest+'</b>'+(v.eta?' · ETA: <b style="color:var(--cyan)">'+v.eta+'</b>':'')+'</div>';
+      if(GF.length){h+='<div style="margin-top:3px">';GF.forEach(function(g){var d=dNM(v.lat,v.lon,g.lat,g.lon);h+='<span class="chip" style="background:'+(d<=g.rad?'#065f46':'var(--border)')+';color:'+(d<=g.rad?'var(--green)':'var(--dim)')+'">'+g.name+'</span>'});h+='</div>';}
+    }else h+='<div class="empty" style="text-align:left;font-size:10px">Sin datos</div>';
+    h+='</div>';return h;
+  }).join('');
+}
+
+// ===== TABS =====
+function sTab(t){
+  document.querySelectorAll('#mainTabs .tab').forEach(function(el,i){el.className='tab'+(['cfg','fleet','db','email','log'][i]===t?' on':'');});
+  ['tCfg','tFleet','tDb','tEmail','tLog'].forEach(function(id,i){var e=document.getElementById(id);if(e)e.style.display=['cfg','fleet','db','email','log'][i]===t?'block':'none';});
+  if(t==='fleet')rFleet();if(t==='db')rDb();
+}
+
+// ===== PANEL =====
+var pMin=true;
+function togglePanel(){pMin=!pMin;document.getElementById('panel').className='panel'+(pMin?' min':'');document.getElementById('pChev').textContent=pMin?'▾':'▴';}
+
+// ===== RESPONSIVE: Clone content to both containers =====
+function initUI(){
+  var tpl=document.getElementById('contentTpl').content.cloneNode(true);
+  var isDesktop=window.innerWidth>=768;
+  var target=isDesktop?document.getElementById('sbContent'):document.getElementById('mobileContent');
+  target.appendChild(tpl);
+
+  // Restore saved values
+  var apiEl=document.getElementById('apikey');if(apiEl)apiEl.value=localStorage.getItem('vt6_k')||'';
+  apiEl.addEventListener('input',function(){localStorage.setItem('vt6_k',this.value);});
+
+  // Email fields
+  var ejP=document.getElementById('ejPub');if(ejP)ejP.value=EJ.pub;
+  var ejS=document.getElementById('ejSvc');if(ejS)ejS.value=EJ.svc;
+  var ejT=document.getElementById('ejTpl');if(ejT)ejT.value=EJ.tpl;
+  var ejTo=document.getElementById('ejTo');if(ejTo)ejTo.value=EJ.to;
+  [ejP,ejS,ejT,ejTo].forEach(function(el){if(el)el.addEventListener('input',saveEmailCfg);});
+}
+
+// ===== VISIBILITY =====
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&!on&&S.rec&&TV.length)setTimeout(conn,1000);});
+
+// ===== PERIODIC =====
+setInterval(function(){rFleet();ui();},10000);
+
+// ===== INIT =====
+load();
+localStorage.setItem('vt6_k',localStorage.getItem('vt6_k')||'');
+initUI();
+Object.keys(V).forEach(function(mm){if(V[mm].lat)updMarker(V[mm]);});
+rVL();rGF();drawGF();syncT();ui();rAL();rFleet();updMS();fitAll();rDb();
+log('Vessel Tracker Pro v6 listo','o');
+</script>
+</body>
+</html>
