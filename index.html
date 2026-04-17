@@ -222,13 +222,18 @@ button{display:block;width:100%;border-radius:8px;padding:10px;font-family:inher
 <script>
 // ===== STATE =====
 var ws=null,on=false,mc=0;
-var TV=[],GF=[],V={},HI={},AL=[],AP={},PS={},DB=[],STATES={};
+var TV=[],GF=[],V={},HI={},AL=[],AP={},PS={},DB=[],STATES={},ANCH={};
 var S={aw:false,snd:true,rec:true,eGeo:true,eSpd:false,eSt:true,eAn:false,eDb:false};
 var EJ={pub:'',svc:'',tpl:'',to:''};
+var EMAIL_LOG={last:{},dayCount:0,dayStart:0};
 var map,markers={},trails={},gfCircles=[];
 var CC=['#22d3ee','#10b981','#f59e0b','#a78bfa','#ef4444','#f472b6','#fb923c','#34d399','#818cf8','#fbbf24','#38bdf8','#e879f9','#4ade80','#facc15','#2dd4bf','#c084fc','#fb7185','#a3e635','#67e8f9','#fca5a5'];
 var NS={0:'Navegando',1:'Fondeado',2:'Sin gobierno',3:'Restringido',5:'Amarrado',7:'Faenando',8:'A vela',15:'—'};
 var DB_INTERVAL=4*60*60*1000; // 4 hours
+var EMAIL_MIN_INTERVAL=5*60*1000; // 5 min between same-key emails
+var EMAIL_DAILY_CAP=50;
+var ANCHOR_DRIFT_NM=0.1;
+var SPD_DELTA_KN=3;
 var lastDbSnap={};
 
 // ===== AUDIO =====
@@ -268,7 +273,7 @@ function updMarker(v){
     +(v.imo?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">IMO</td><td>'+v.imo+'</td></tr>':'')
     +(v.cs?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Call Sign</td><td>'+v.cs+'</td></tr>':'')
     +(v.type?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Tipo</td><td>'+v.type+'</td></tr>':'')
-    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Posición</td><td>'+v.lat.toFixed(5)+'°N '+v.lon.toFixed(5)+'°E</td></tr>'
+    +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Posición</td><td>'+fmtLL(v.lat,v.lon,5)+'</td></tr>'
     +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">SOG</td><td><b>'+(v.sog||0)+' kn</b></td></tr>'
     +'<tr><td style="color:#64748b;padding:2px 8px 2px 0">COG</td><td>'+(v.cog||0)+'°</td></tr>'
     +(v.hdg?'<tr><td style="color:#64748b;padding:2px 8px 2px 0">Heading</td><td>'+v.hdg+'°</td></tr>':'')
@@ -291,12 +296,20 @@ function fitAll(){var pts=Object.values(V).filter(function(v){return v.lat}).map
 // ===== HAVERSINE =====
 function dNM(a,b,c,d){var R=3440.065,x=Math.PI/180,dl=(c-a)*x,dn=(d-b)*x;var s=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a*x)*Math.cos(c*x)*Math.sin(dn/2)*Math.sin(dn/2);return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));}
 
+// ===== FORMATTERS =====
+function fmtLat(lat,p){p=p==null?4:p;return Math.abs(lat).toFixed(p)+'°'+(lat>=0?'N':'S');}
+function fmtLon(lon,p){p=p==null?4:p;return Math.abs(lon).toFixed(p)+'°'+(lon>=0?'E':'W');}
+function fmtLL(lat,lon,p){return fmtLat(lat,p)+' '+fmtLon(lon,p);}
+
 // ===== PERSISTENCE =====
 function load(){try{
-  var d=localStorage.getItem('vt6');if(d){var o=JSON.parse(d);TV=o.tv||[];GF=o.gf||[];S=Object.assign(S,o.s||{});EJ=Object.assign(EJ,o.ej||{});V=o.v||{};HI=o.hi||{};DB=o.db||[];STATES=o.st||{};lastDbSnap=o.lds||{};}
+  var d=localStorage.getItem('vt6');if(d){var o=JSON.parse(d);TV=o.tv||[];GF=o.gf||[];S=Object.assign(S,o.s||{});EJ=Object.assign(EJ,o.ej||{});V=o.v||{};HI=o.hi||{};DB=o.db||[];STATES=o.st||{};lastDbSnap=o.lds||{};ANCH=o.anch||{};}
 }catch(e){}}
-function saveCfg(){try{localStorage.setItem('vt6',JSON.stringify({tv:TV,gf:GF,s:S,ej:EJ,v:V,hi:HI,db:DB,st:STATES,lds:lastDbSnap}));}catch(e){}}
+var _saveTimer=null;
+function _doSave(){try{localStorage.setItem('vt6',JSON.stringify({tv:TV,gf:GF,s:S,ej:EJ,v:V,hi:HI,db:DB,st:STATES,lds:lastDbSnap,anch:ANCH}));}catch(e){}}
+function saveCfg(){clearTimeout(_saveTimer);_saveTimer=setTimeout(_doSave,500);}
 function saveAll(){saveCfg();}
+window.addEventListener('beforeunload',function(){clearTimeout(_saveTimer);_doSave();});
 
 // ===== SYNC TOGGLES =====
 function syncT(){
@@ -316,7 +329,9 @@ function rmV(m){
   TV=TV.filter(function(x){return x.m!==m});
   if(markers[m]){map.removeLayer(markers[m]);delete markers[m];}
   if(trails[m]){map.removeLayer(trails[m]);delete trails[m];}
-  delete V[m];delete HI[m];saveCfg();rVL();updMS();
+  delete V[m];delete HI[m];delete STATES[m];delete lastDbSnap[m];delete PS[m];delete ANCH[m];
+  Object.keys(AP).forEach(function(k){if(k.indexOf(m+'_')===0)delete AP[k];});
+  saveCfg();rVL();updMS();
 }
 function rVL(){
   var e=document.getElementById('vList');document.getElementById('vc').textContent=TV.length;
@@ -407,8 +422,8 @@ function dbSnapshot(mm,name,lat,lon,sog,cog,st){
   var last=lastDbSnap[mm]||0;
   if(now-last<DB_INTERVAL)return;
   lastDbSnap[mm]=now;
-  dbRecord(mm,name,'NAV',lat.toFixed(4)+'°N '+lon.toFixed(4)+'°E '+sog+'kn '+(cog||0)+'°'+(V[mm]&&V[mm].dest?' → '+V[mm].dest:''));
-  if(S.eDb)sendEmail('📊 '+name+' pos: '+lat.toFixed(4)+'° '+lon.toFixed(4)+'° '+sog+'kn');
+  dbRecord(mm,name,'NAV',fmtLL(lat,lon)+' '+sog+'kn '+(cog||0)+'°'+(V[mm]&&V[mm].dest?' → '+V[mm].dest:''));
+  if(S.eDb)sendEmail('📊 '+name+' pos: '+fmtLL(lat,lon)+' '+sog+'kn','db_'+mm);
 }
 function dbRecord(mm,name,type,detail){
   var v=V[mm]||{};
@@ -418,21 +433,49 @@ function dbRecord(mm,name,type,detail){
 }
 
 // ===== CHECKS =====
-function checkGeo(mm,lat,lon,name){GF.forEach(function(g){var d=dNM(lat,lon,g.lat,g.lon),k=mm+'_'+g.id,was=AP[k],is=d<=g.rad;if(is&&!was){aa('geo','🟡',name+' ENTRÓ '+g.name);if(S.eGeo)sendEmail('🟡 '+name+' entró en '+g.name);}if(!is&&was){aa('geo','🔴',name+' SALIÓ '+g.name);if(S.eGeo)sendEmail('🔴 '+name+' salió de '+g.name);}AP[k]=is;});}
-function checkAnch(mm,lat,lon,name,st){if(!S.aw||st!==1)return;var p=V[mm];if(p&&p.lat&&p.st===1){var d=dNM(p.lat,p.lon,lat,lon);if(d>.1){aa('anchor','⚓',name+' DERIVA '+d.toFixed(2)+'NM');if(S.eAn)sendEmail('⚓ '+name+' deriva en fondeo: '+d.toFixed(2)+' NM');}}}
-function checkSpd(mm,sog,name){var p=PS[mm];if(p!==undefined&&Math.abs(sog-p)>3){aa('speed','⚡',name+': '+p.toFixed(1)+'→'+sog.toFixed(1)+'kn');if(S.eSpd)sendEmail('⚡ '+name+' velocidad: '+p.toFixed(1)+'→'+sog.toFixed(1)+' kn');}PS[mm]=sog;}
+function checkGeo(mm,lat,lon,name){GF.forEach(function(g){var d=dNM(lat,lon,g.lat,g.lon),k=mm+'_'+g.id,was=AP[k],is=d<=g.rad;if(is&&!was){aa('geo','🟡',name+' ENTRÓ '+g.name);if(S.eGeo)sendEmail('🟡 '+name+' entró en '+g.name,'geo_'+k);}if(!is&&was){aa('geo','🔴',name+' SALIÓ '+g.name);if(S.eGeo)sendEmail('🔴 '+name+' salió de '+g.name,'geo_'+k);}AP[k]=is;});}
+function checkAnch(mm,lat,lon,name,st){
+  if(!S.aw){if(ANCH[mm])delete ANCH[mm];return;}
+  if(st!==1){if(ANCH[mm])delete ANCH[mm];return;}
+  if(!ANCH[mm]){ANCH[mm]={lat:lat,lon:lon,ts:Date.now()};return;}
+  var d=dNM(ANCH[mm].lat,ANCH[mm].lon,lat,lon);
+  if(d>ANCHOR_DRIFT_NM){
+    aa('anchor','⚓',name+' DERIVA '+d.toFixed(2)+'NM');
+    if(S.eAn)sendEmail('⚓ '+name+' deriva en fondeo: '+d.toFixed(2)+' NM','anch_'+mm);
+  }
+}
+function checkSpd(mm,sog,name){
+  var ps=PS[mm];
+  if(!ps||typeof ps==='number'){PS[mm]={stable:sog,count:0};return;}
+  if(Math.abs(sog-ps.stable)>SPD_DELTA_KN){
+    ps.count++;
+    if(ps.count>=2){
+      aa('speed','⚡',name+': '+ps.stable.toFixed(1)+'→'+sog.toFixed(1)+'kn');
+      if(S.eSpd)sendEmail('⚡ '+name+' velocidad: '+ps.stable.toFixed(1)+'→'+sog.toFixed(1)+' kn','spd_'+mm);
+      ps.stable=sog;ps.count=0;
+    }
+  }else{
+    ps.count=0;
+  }
+}
 
 // ===== EMAIL =====
-function sendEmail(msg){
+function sendEmail(msg,key){
   if(!EJ.pub||!EJ.svc||!EJ.tpl||!EJ.to)return;
+  var now=Date.now();
+  if(now-EMAIL_LOG.dayStart>86400000){EMAIL_LOG.dayStart=now;EMAIL_LOG.dayCount=0;}
+  if(EMAIL_LOG.dayCount>=EMAIL_DAILY_CAP){log('⚠ Límite diario email ('+EMAIL_DAILY_CAP+') alcanzado','w');return;}
+  key=key||msg;
+  if(EMAIL_LOG.last[key]&&now-EMAIL_LOG.last[key]<EMAIL_MIN_INTERVAL){log('⏱ Email throttled: '+key,'g');return;}
+  EMAIL_LOG.last[key]=now;EMAIL_LOG.dayCount++;
   try{
     emailjs.send(EJ.svc,EJ.tpl,{to_email:EJ.to,subject:'VesselTracker Alert',message:msg,time:new Date().toLocaleString('es-ES')},{publicKey:EJ.pub});
-    log('📧 Email enviado: '+msg.substring(0,60),'o');
+    log('📧 Email ('+EMAIL_LOG.dayCount+'/'+EMAIL_DAILY_CAP+' hoy): '+msg.substring(0,60),'o');
   }catch(e){log('📧 Error email: '+e.message,'e');}
 }
 function testEmail(){
   saveEmailCfg();
-  sendEmail('🧪 Test — Vessel Tracker funcionando correctamente a las '+new Date().toLocaleString('es-ES'));
+  sendEmail('🧪 Test — Vessel Tracker funcionando correctamente a las '+new Date().toLocaleString('es-ES'),'test_'+Date.now());
 }
 function saveEmailCfg(){
   EJ.pub=document.getElementById('ejPub').value.trim();
@@ -504,16 +547,17 @@ function proc(raw){
       var nm=(mt.ShipName||'').trim()||mm;
       processUpdate(mm,nm,p.Latitude,p.Longitude,p.Sog,p.Cog,p.TrueHeading===511?null:p.TrueHeading,p.NavigationalStatus,'ais');
       if(mc%30===0){saveAll();rVL();rFleet();}
-      log('📡 '+nm+' '+p.Latitude.toFixed(4)+'° '+p.Longitude.toFixed(4)+'° '+p.Sog.toFixed(1)+'kn','d');
+      log('📡 '+nm+' '+fmtLL(p.Latitude,p.Longitude)+' '+p.Sog.toFixed(1)+'kn','d');
     }else if(tp==='ShipStaticData'){
       var sd=d.Message.ShipStaticData;if(!sd)return;
       var eta=null;
       if(sd.Eta&&(sd.Eta.Month||sd.Eta.Day)){
         var now=new Date();
-        var y=now.getFullYear();
         var mo=sd.Eta.Month||1,da=sd.Eta.Day||1,hr=sd.Eta.Hour||0,mi=sd.Eta.Minute||0;
-        if(mo<now.getMonth()+1)y++; // next year
-        eta=String(da).padStart(2,'0')+'/'+String(mo).padStart(2,'0')+'/'+y+' '+String(hr).padStart(2,'0')+':'+String(mi).padStart(2,'0');
+        var y=now.getUTCFullYear();
+        var etaDate=new Date(Date.UTC(y,mo-1,da,hr,mi));
+        if(etaDate.getTime()<now.getTime()-86400000)etaDate=new Date(Date.UTC(y+1,mo-1,da,hr,mi));
+        eta=etaDate.toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
       }
       V[mm]=Object.assign(V[mm]||{},{mm:mm,name:(mt.ShipName||'').trim()||mm,imo:sd.ImoNumber,cs:sd.CallSign,dest:sd.Destination,eta:eta,type:sd.Type,src:'ais'});
       if(V[mm].lat)updMarker(V[mm]);
@@ -544,7 +588,7 @@ function rFleet(){
     h+='</div>';
     if(v.lat){
       h+='<div class="dg">';
-      h+='<div><div class="dl">Posición</div><div class="dv">'+v.lat.toFixed(4)+'° '+v.lon.toFixed(4)+'°</div></div>';
+      h+='<div><div class="dl">Posición</div><div class="dv">'+fmtLL(v.lat,v.lon)+'</div></div>';
       h+='<div><div class="dl">SOG/COG</div><div class="dv" style="color:'+col+'">'+(v.sog||0)+' kn '+(v.cog||0)+'°</div></div>';
       h+='</div>';
       if(v.dest)h+='<div style="font-size:10px;color:var(--dim);margin-top:3px">Destino: <b style="color:var(--amber)">'+v.dest+'</b>'+(v.eta?' · ETA: <b style="color:var(--cyan)">'+v.eta+'</b>':'')+'</div>';
