@@ -1,0 +1,21 @@
+{
+  "name": "Vessel Tracker Pro",
+  "short_name": "VTrack",
+  "description": "Seguimiento AIS + manual de buques con alertas",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "lang": "es",
+  "categories": ["navigation", "utilities"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -8,6 +8,10 @@
 <meta name="apple-mobile-web-app-title" content="VTrack">
 <title>Vessel Tracker Pro</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icon.svg">
+<meta name="theme-color" content="#0a0e17">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
@@ -165,6 +169,11 @@ button{display:block;width:100%;border-radius:8px;padding:10px;font-family:inher
     <div class="setting-row"><span>Anchor Watch</span><div class="toggle" id="tAW" onclick="S.aw=!S.aw;syncT();saveCfg()"></div></div>
     <div class="setting-row"><span>Sonido</span><div class="toggle on" id="tSnd" onclick="S.snd=!S.snd;syncT();saveCfg()"></div></div>
     <div class="setting-row"><span>Auto-reconexión</span><div class="toggle on" id="tRec" onclick="S.rec=!S.rec;syncT();saveCfg()"></div></div>
+    <div class="setting-row"><span>Notificaciones <span id="ntfSt" style="color:var(--dim);font-size:9px"></span></span><div class="toggle" id="tNtf" onclick="toggleNotif()"></div></div>
+  </div>
+  <div class="card" id="instCard" style="display:none">
+    <div class="label">App</div>
+    <button class="ba" onclick="doInstall()">📱 Instalar en pantalla de inicio</button>
   </div>
   <div class="row">
     <button class="bg" id="goBtn" onclick="conn()">▶ Conectar</button>
@@ -223,7 +232,7 @@ button{display:block;width:100%;border-radius:8px;padding:10px;font-family:inher
 // ===== STATE =====
 var ws=null,on=false,mc=0;
 var TV=[],GF=[],V={},HI={},AL=[],AP={},PS={},DB=[],STATES={},ANCH={};
-var S={aw:false,snd:true,rec:true,eGeo:true,eSpd:false,eSt:true,eAn:false,eDb:false};
+var S={aw:false,snd:true,rec:true,notif:false,eGeo:true,eSpd:false,eSt:true,eAn:false,eDb:false};
 var EJ={pub:'',svc:'',tpl:'',to:''};
 var EMAIL_LOG={last:{},dayCount:0,dayStart:0};
 var map,markers={},trails={},gfCircles=[];
@@ -313,8 +322,15 @@ window.addEventListener('beforeunload',function(){clearTimeout(_saveTimer);_doSa
 
 // ===== SYNC TOGGLES =====
 function syncT(){
-  var ids={tAW:'aw',tSnd:'snd',tRec:'rec',tEGeo:'eGeo',tESpd:'eSpd',tESt:'eSt',tEAn:'eAn',tEDb:'eDb'};
+  var ids={tAW:'aw',tSnd:'snd',tRec:'rec',tNtf:'notif',tEGeo:'eGeo',tESpd:'eSpd',tESt:'eSt',tEAn:'eAn',tEDb:'eDb'};
   Object.keys(ids).forEach(function(id){var el=document.getElementById(id);if(el)el.className='toggle'+(S[ids[id]]?' on':'');});
+  var ns=document.getElementById('ntfSt');
+  if(ns){
+    if(!('Notification' in window))ns.textContent='no soportado';
+    else if(Notification.permission==='denied')ns.textContent='bloqueadas';
+    else if(Notification.permission!=='granted')ns.textContent='sin permiso';
+    else ns.textContent='';
+  }
 }
 
 // ===== VESSELS =====
@@ -485,8 +501,38 @@ function saveEmailCfg(){
   saveCfg();
 }
 
+// ===== NOTIFICATIONS =====
+var _swReg=null,_deferredInst=null;
+function notify(title,body,tag){
+  if(!S.notif)return;
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  try{
+    if(_swReg&&_swReg.active){_swReg.active.postMessage({type:'notify',title:title,body:body,tag:tag||'vt'});}
+    else{new Notification(title,{body:body,tag:tag||'vt',icon:'./icon.svg'});}
+  }catch(e){log('Notif error: '+e.message,'e');}
+}
+function toggleNotif(){
+  if(!('Notification' in window)){log('Notificaciones no soportadas','w');return;}
+  if(S.notif){S.notif=false;syncT();saveCfg();return;}
+  if(Notification.permission==='granted'){S.notif=true;syncT();saveCfg();return;}
+  if(Notification.permission==='denied'){log('Permiso de notificaciones denegado en el navegador','w');syncT();return;}
+  Notification.requestPermission().then(function(p){S.notif=(p==='granted');syncT();saveCfg();if(p==='granted')notify('Vessel Tracker','Notificaciones activas','init');});
+}
+function doInstall(){
+  if(!_deferredInst)return;
+  _deferredInst.prompt();
+  _deferredInst.userChoice.then(function(){_deferredInst=null;var c=document.getElementById('instCard');if(c)c.style.display='none';});
+}
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').then(function(r){_swReg=r;}).catch(function(){});
+  });
+}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_deferredInst=e;var c=document.getElementById('instCard');if(c)c.style.display='block';});
+window.addEventListener('appinstalled',function(){_deferredInst=null;var c=document.getElementById('instCard');if(c)c.style.display='none';});
+
 // ===== ALERTS =====
-function aa(t,i,m){AL.unshift({t:t,i:i,m:m,ts:Date.now()});if(AL.length>200)AL.length=200;if(t!=='info'){beep(880,.15);setTimeout(function(){beep(1100,.15)},180);if(navigator.vibrate)navigator.vibrate(200);}rAL();}
+function aa(t,i,m){AL.unshift({t:t,i:i,m:m,ts:Date.now()});if(AL.length>200)AL.length=200;if(t!=='info'){beep(880,.15);setTimeout(function(){beep(1100,.15)},180);if(navigator.vibrate)navigator.vibrate(200);notify('⚓ Vessel Tracker',i+' '+m,'vt_'+t);}rAL();}
 function rAL(){var e=document.getElementById('alC');if(!e)return;if(!AL.length){e.innerHTML='<div class="empty">Sin alertas</div>';return;}e.innerHTML=AL.slice(0,40).map(function(a){var c=a.t==='geo'?'var(--amber)':a.t==='speed'?'var(--cyan)':a.t==='anchor'?'var(--red)':'var(--dim)';return'<div class="ai"><span class="dot" style="background:'+c+'"></span>'+a.i+' '+a.m+'<div class="at">'+new Date(a.ts).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div></div>'}).join('');}
 
 // ===== LOG =====
