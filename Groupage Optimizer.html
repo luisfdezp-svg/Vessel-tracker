@@ -927,6 +927,33 @@ select{cursor:pointer}
 .prop-running{text-align:center; padding:40px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; font-size:12px}
 
 /* ================================================================
+   ITEMS LIST (pre-opt editor)
+   ================================================================ */
+.items-list{max-height:220px; overflow-y:auto; background:var(--bg-2); border:1px solid var(--line); border-radius:8px; padding:4px}
+.items-list:empty::before{content:'Sin bultos aún. Añade manualmente, por archivo o carga una demo.'; display:block; padding:18px 8px; text-align:center; font-size:11px; color:var(--ink-dim)}
+.item-row{
+  display:grid; grid-template-columns:auto 1fr auto auto; gap:6px;
+  align-items:center; padding:6px 8px; border-radius:6px;
+  font-size:11px; cursor:pointer; transition:background .12s;
+  border-bottom:1px solid var(--line);
+}
+.item-row:last-child{border-bottom:none}
+.item-row:hover{background:var(--bg-3)}
+.item-row .ir-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0}
+.item-row .ir-main{min-width:0; overflow:hidden}
+.item-row .ir-main b{display:block; color:var(--ink); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.item-row .ir-main small{color:var(--ink-dim); font-size:9.5px; font-family:'JetBrains Mono',monospace}
+.item-row .ir-adr{
+  width:20px; height:20px; display:grid; place-items:center;
+  color:#0a0a0a; font-weight:800; font-size:10px; font-family:'JetBrains Mono',monospace;
+  transform:rotate(45deg); border:1.5px solid #0a0a0a;
+}
+.item-row .ir-adr span{transform:rotate(-45deg)}
+.item-row .ir-flag{font-size:10px; padding:1px 5px; border-radius:3px; background:var(--bg-1); color:var(--ink-dim); border:1px solid var(--line)}
+.item-row .ir-flag.frag{background:rgba(255,77,94,0.15); color:var(--ac-red); border-color:var(--ac-red)}
+.item-row .ir-flag.notop{background:rgba(255,77,94,0.2); color:var(--ac-red); border-color:var(--ac-red)}
+
+/* ================================================================
    SEQUENCE TABLE
    ================================================================ */
 .seq-wrap{
@@ -1680,6 +1707,22 @@ select{cursor:pointer}
         </div>
         <button class="btn-primary btn-full" id="btnAddManual">Añadir bulto</button>
       </div>
+
+      <div class="field-label" style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+        <span>Lista de bultos (<span id="itemsListCount">0</span>)</span>
+        <button class="btn-ghost btn-small" type="button" id="btnClearItems" style="padding:4px 8px">🗑 Vaciar</button>
+      </div>
+      <div id="itemsList" class="items-list"></div>
+
+      <div class="field-label" style="margin-top:14px">Plantillas / escenarios</div>
+      <div class="form-grid-2" style="gap:4px">
+        <button class="btn-ghost btn-small" type="button" id="btnSaveTpl">💾 Guardar escenario</button>
+        <select id="tplSelect"><option value="">— cargar escenario —</option></select>
+      </div>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        <button class="btn-ghost btn-small" type="button" id="btnLoadTpl" style="flex:1">Cargar</button>
+        <button class="btn-ghost btn-small" type="button" id="btnDelTpl" style="flex:1">Borrar</button>
+      </div>
     </section>
 
     <!-- STEP 4: OPTIMIZE -->
@@ -1965,6 +2008,7 @@ select{cursor:pointer}
       </button>
       <div class="mini-actions" style="margin-top:6px">
         <button class="btn-ghost" id="btnExportCSV">CSV</button>
+        <button class="btn-ghost" id="btnExportXLSX">XLSX</button>
         <button class="btn-ghost" id="btnExportJSON">JSON</button>
       </div>
     </section>
@@ -1980,6 +2024,64 @@ select{cursor:pointer}
     <div class="progress-detail" id="progressDetail">Inicializando…</div>
     <div class="progress-viz">
       <div class="viz-dot"></div><div class="viz-dot"></div><div class="viz-dot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ITEM EDIT MODAL (pre-optimización) ============ -->
+<div class="modal-mask" id="itemEditModal">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" data-close-modal="itemEditModal">×</button>
+    <h2 id="iemTitle">Editar bulto</h2>
+    <p class="modal-lead" id="iemSub"></p>
+    <div class="form-grid-2">
+      <label class="field"><span class="field-label">Referencia</span><input type="text" id="iemRef"></label>
+      <label class="field"><span class="field-label">Tipo</span>
+        <select id="iemType">
+          <option value="caja">Caja</option>
+          <option value="palet_eur">Palet EUR</option>
+          <option value="palet_us">Palet US</option>
+          <option value="bobina">Bobina</option>
+          <option value="jaula">Jaula</option>
+          <option value="bigbag">Big-bag</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-grid-3">
+      <label class="field"><span class="field-label">Largo <em>cm</em></span><input type="number" id="iemL"></label>
+      <label class="field"><span class="field-label">Ancho <em>cm</em></span><input type="number" id="iemA"></label>
+      <label class="field"><span class="field-label">Alto <em>cm</em></span><input type="number" id="iemH"></label>
+    </div>
+    <div class="form-grid-2">
+      <label class="field"><span class="field-label">Peso <em>kg</em></span><input type="number" id="iemW"></label>
+      <label class="field"><span class="field-label">Destino</span><select id="iemDest"></select></label>
+    </div>
+    <div class="form-grid-2">
+      <label class="field"><span class="field-label">Peso máx. encima <em>kg</em></span><input type="number" id="iemMaxTop" min="0"></label>
+      <label class="field"><span class="field-label">ADR</span>
+        <select id="iemAdr">
+          <option value="">— sin ADR —</option>
+          <option value="1">1 · Explosivos</option>
+          <option value="2">2 · Gases</option>
+          <option value="3">3 · Líq. inflamables</option>
+          <option value="4">4 · Sól. inflamables</option>
+          <option value="5">5 · Comburentes</option>
+          <option value="6">6 · Tóxicos</option>
+          <option value="7">7 · Radiactivos</option>
+          <option value="8">8 · Corrosivos</option>
+          <option value="9">9 · Misceláneos</option>
+        </select>
+      </label>
+    </div>
+    <div class="checkrow">
+      <label class="check"><input type="checkbox" id="iemStack"><span>Remontable</span></label>
+      <label class="check"><input type="checkbox" id="iemFrag"><span>Frágil</span></label>
+      <label class="check"><input type="checkbox" id="iemNoTop"><span>No apilar encima</span></label>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:14px">
+      <button class="btn-primary" id="iemSave" type="button" style="flex:2">Guardar cambios</button>
+      <button class="btn-ghost" id="iemDup" type="button" style="flex:1">Duplicar</button>
+      <button class="btn-ghost" id="iemDel" type="button" style="flex:1;color:var(--ac-red)">Borrar</button>
     </div>
   </div>
 </div>
@@ -3595,8 +3697,225 @@ function addItems(items){
   state.items.push(...items);
   renderDestinations(); renderManualDestSelect();
   $('itemCount').textContent=state.items.length;
+  const fbL=$('fabLeftBadge'); if(fbL) fbL.textContent=state.items.length;
   $('statusText').textContent=`${state.items.length} bultos en cola`;
+  renderItemsList();
   updateStepper();
+}
+
+// ===== Pre-opt items list + inline edit =====
+function renderItemsList(){
+  const box=$('itemsList'); if(!box) return;
+  $('itemsListCount').textContent=state.items.length;
+  if(!state.items.length){box.innerHTML=''; return;}
+  box.innerHTML=state.items.map(it=>{
+    const col=destColorFor(it.destination);
+    const adrInfo=it.adr?ADR_CLASSES[it.adr]:null;
+    const flags=[];
+    if(it.fragile) flags.push('<span class="ir-flag frag">Frágil</span>');
+    if(!it.stackable) flags.push('<span class="ir-flag">No remont.</span>');
+    if(it.noStackTop) flags.push('<span class="ir-flag notop">No encima</span>');
+    const adr=adrInfo?`<span class="ir-adr" style="background:${adrInfo.color}" title="ADR ${it.adr} · ${adrInfo.label}"><span>${it.adr}</span></span>`:'';
+    return `<div class="item-row" data-id="${it.id}">
+      <span class="ir-dot" style="background:${col}"></span>
+      <div class="ir-main"><b>${it.ref||'(sin ref)'}</b><small>${it.L}×${it.A}×${it.H}·${Math.round(it.weight)}kg · ${it.destination||'—'}</small></div>
+      ${adr}
+      <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;justify-content:flex-end">${flags.join('')}</div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('.item-row').forEach(row=>row.addEventListener('click',()=>openItemEdit(row.dataset.id)));
+}
+
+let _iemEditingId=null;
+function openItemEdit(id){
+  const it=state.items.find(x=>x.id===id); if(!it) return;
+  _iemEditingId=id;
+  $('iemTitle').textContent='Editar bulto';
+  $('iemSub').textContent=`ID ${id}`;
+  $('iemRef').value=it.ref||'';
+  $('iemType').value=it.type||'caja';
+  $('iemL').value=it.L; $('iemA').value=it.A; $('iemH').value=it.H;
+  $('iemW').value=it.weight;
+  const destSel=$('iemDest');
+  destSel.innerHTML=state.destinations.map(d=>`<option value="${d.name}">${d.name}</option>`).join('');
+  destSel.value=it.destination||(state.destinations[0]&&state.destinations[0].name)||'';
+  $('iemMaxTop').value=it.maxTop||0;
+  $('iemAdr').value=it.adr||'';
+  $('iemStack').checked=it.stackable!==false;
+  $('iemFrag').checked=it.fragile===true;
+  $('iemNoTop').checked=it.noStackTop===true;
+  $('itemEditModal').classList.add('open');
+}
+function saveItemEdit(){
+  const id=_iemEditingId; const it=state.items.find(x=>x.id===id); if(!it) return;
+  it.ref=$('iemRef').value.trim()||it.ref;
+  it.type=$('iemType').value;
+  it.L=parseFloat($('iemL').value)||it.L;
+  it.A=parseFloat($('iemA').value)||it.A;
+  it.H=parseFloat($('iemH').value)||it.H;
+  it.weight=parseFloat($('iemW').value)||it.weight;
+  it.destination=$('iemDest').value||it.destination;
+  it.maxTop=parseFloat($('iemMaxTop').value)||0;
+  const adrVal=$('iemAdr').value; it.adr=adrVal?adrVal:null;
+  it.stackable=$('iemStack').checked;
+  it.fragile=$('iemFrag').checked;
+  it.noStackTop=$('iemNoTop').checked;
+  it.volume=(it.L*it.A*it.H)/1e6;
+  // Sync con la colocacion actual si existe
+  const placed=state.placed.find(p=>p.id===id);
+  if(placed){ Object.assign(placed, {ref:it.ref,type:it.type,weight:it.weight,maxTop:it.maxTop,adr:it.adr,stackable:it.stackable,fragile:it.fragile,noStackTop:it.noStackTop}); }
+  renderItemsList();
+  if(state.placed.length) buildItemMeshes(state.placed);
+  updateKPIs();
+  $('itemEditModal').classList.remove('open');
+  $('statusText').textContent='✎ Bulto actualizado — re-optimiza si cambiaron dimensiones/peso';
+}
+function duplicateItem(){
+  const id=_iemEditingId; const it=state.items.find(x=>x.id===id); if(!it) return;
+  const copy=makeItem({ref:(it.ref||'ITEM')+'·copia',type:it.type,L:it.L,A:it.A,H:it.H,weight:it.weight,destination:it.destination,stackable:it.stackable,fragile:it.fragile,maxTop:it.maxTop,adr:it.adr,noStackTop:it.noStackTop});
+  state.items.push(copy);
+  renderItemsList();
+  $('itemEditModal').classList.remove('open');
+  $('statusText').textContent=`✓ Bulto duplicado: ${copy.ref}`;
+}
+function deleteCurrentItem(){
+  const id=_iemEditingId; const idx=state.items.findIndex(x=>x.id===id); if(idx<0) return;
+  state.items.splice(idx,1);
+  const pidx=state.placed.findIndex(p=>p.id===id);
+  if(pidx>=0){state.placed.splice(pidx,1);}
+  if(state.selectedItem && state.selectedItem.id===id){state.selectedItem=null; closeItemDetails();}
+  renderItemsList();
+  if(state.placed.length) buildItemMeshes(state.placed);
+  updateKPIs(); renderSequenceTable();
+  $('itemEditModal').classList.remove('open');
+  $('itemCount').textContent=state.items.length;
+  $('statusText').textContent=`🗑 Bulto eliminado`;
+}
+
+// ===== XLSX export =====
+function exportXLSX(){
+  if(!state.items.length){alert('Sin bultos para exportar'); return;}
+  const wb=XLSX.utils.book_new();
+  // Packing list
+  const pkHead=['ref','tipo','destino','largo_cm','ancho_cm','alto_cm','peso_kg','remontable','fragil','no_apilar_encima','peso_max_encima','adr','volumen_m3'];
+  const pkRows=state.items.map(it=>[it.ref,it.type,it.destination,it.L,it.A,it.H,it.weight,it.stackable?'SI':'NO',it.fragile?'SI':'NO',it.noStackTop?'SI':'NO',it.maxTop,it.adr||'',((it.L*it.A*it.H)/1e6).toFixed(3)]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([pkHead,...pkRows]), 'Packing list');
+  // Plan final
+  if(state.placed.length){
+    const plHead=['seq','ref','destino','x_cm','y_cm','z_cm','largo_cm','ancho_cm','alto_cm','peso_kg','rotado','fragil','adr','apilado_sobre'];
+    const plRows=[...state.placed].sort((a,b)=>a.loadSeq-b.loadSeq).map(p=>[p.loadSeq,p.ref,p.destination,p.x,p.y,p.z,p.L,p.A,p.H,p.weight,p.rotated?'SI':'NO',p.fragile?'SI':'NO',p.adr||'',p.stackedOn||'']);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([plHead,...plRows]), 'Plan final');
+  }
+  // No cargados
+  if(state.unloaded.length){
+    const uHead=['ref','destino','largo_cm','ancho_cm','alto_cm','peso_kg','motivo'];
+    const uRows=state.unloaded.map(u=>[u.ref,u.destination,u.L,u.A,u.H,u.weight,'no cabe / excede MMA']);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([uHead,...uRows]), 'No cargados');
+  }
+  // Amarre
+  if(state.placed.length){
+    const lash=computeLashing(state.placed);
+    const lHead=['destino','bultos','masa_kg','Fx_daN','Fy_daN','correas_sobre_lona','amarres_directos_30','ADR','fragil'];
+    const lRows=lash.groups.map(g=>[g.dest,g.items,Math.round(g.mass),Math.round(g.FxDaN),Math.round(g.FyDaN),g.nFric,g.nDirect,g.hasAdr?'SI':'NO',g.hasFragile?'SI':'NO']);
+    lRows.push(['TOTAL',state.placed.length,Math.round(lash.mass),Math.round(lash.FxDaN),Math.round(lash.FyDaN),'','','','']);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([lHead,...lRows]), 'Amarre');
+  }
+  // Resumen
+  const truck=TRUCKS[state.truck];
+  const m=state.placed.length?computeMetrics(state.placed,truck):{volPct:0,totalW:0,lm:0,cogX:0,cogY:0,cogZ:0};
+  const sum=[
+    ['Vehículo', truck.name],
+    ['Dimensiones', `${truck.L}x${truck.A}x${truck.H} cm`],
+    ['MMA', truck.maxKg+' kg'],
+    ['Método', state.loadingMethod],
+    ['Separación destinos', state.separation.dest+' cm'],
+    ['Separación ADR', state.separation.adr+' cm'],
+    ['Bultos totales', state.items.length],
+    ['Bultos colocados', state.placed.length],
+    ['No cargados', state.unloaded.length],
+    ['Ocupación volumen', m.volPct.toFixed(1)+' %'],
+    ['Peso total', Math.round(m.totalW).toLocaleString()+' kg'],
+    ['Metros lineales', (m.lm||0).toFixed(2)+' m'],
+    ['CdG X', (m.cogX/100).toFixed(2)+' m'],
+    ['CdG Y', (m.cogY/100).toFixed(2)+' m'],
+    ['CdG Z', (m.cogZ||0).toFixed(1)+' cm']
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), 'Resumen');
+  XLSX.writeFile(wb, `groupage_${Date.now()}.xlsx`);
+}
+
+// ===== Templates / escenarios =====
+const TPL_KEY='groupage_templates_v1';
+function loadTemplatesList(){
+  try{return JSON.parse(localStorage.getItem(TPL_KEY)||'[]');}catch(e){return [];}
+}
+function saveTemplatesList(list){try{localStorage.setItem(TPL_KEY, JSON.stringify(list));}catch(e){alert('No se pudo guardar: '+e.message);}}
+function refreshTplSelect(){
+  const sel=$('tplSelect'); if(!sel) return;
+  const cur=sel.value;
+  const list=loadTemplatesList();
+  sel.innerHTML=['<option value="">— cargar escenario —</option>', ...list.map(t=>`<option value="${t.name}">${t.name} (${t.items||0} bultos)</option>`)].join('');
+  if(cur && list.find(t=>t.name===cur)) sel.value=cur;
+}
+function saveTemplate(){
+  const name=prompt('Nombre del escenario:', `Plantilla ${new Date().toLocaleDateString('es-ES')}`);
+  if(!name) return;
+  const list=loadTemplatesList();
+  const idx=list.findIndex(t=>t.name===name);
+  const tpl={
+    name, ts:Date.now(),
+    truck:state.truck, origin:state.origin,
+    destinations:JSON.parse(JSON.stringify(state.destinations)),
+    items:JSON.parse(JSON.stringify(state.items)),
+    loadingMethod:state.loadingMethod,
+    separation:Object.assign({}, state.separation),
+    lashing:Object.assign({}, state.lashing),
+    cogEnvelope:Object.assign({}, state.cogEnvelope)
+  };
+  tpl.itemsCount=state.items.length;
+  if(idx>=0){if(!confirm(`Ya existe "${name}". ¿Sobrescribir?`)) return; list[idx]=tpl;} else list.push(tpl);
+  saveTemplatesList(list);
+  refreshTplSelect();
+  $('statusText').textContent=`💾 Escenario "${name}" guardado`;
+}
+function loadTemplate(){
+  const name=$('tplSelect').value; if(!name) return;
+  const list=loadTemplatesList();
+  const tpl=list.find(t=>t.name===name); if(!tpl) return;
+  if(state.items.length && !confirm(`Cargar "${name}" reemplazará los bultos y config actuales. ¿Continuar?`)) return;
+  state.truck=tpl.truck||state.truck;
+  state.origin=tpl.origin||state.origin;
+  state.destinations=JSON.parse(JSON.stringify(tpl.destinations||state.destinations));
+  state.items=(tpl.items||[]).map(x=>Object.assign({},x,{id:Math.random().toString(36).slice(2,10)}));
+  state.placed=[]; state.unloaded=[]; state.selectedItem=null; state.optMeta=null;
+  state.loadingMethod=tpl.loadingMethod||state.loadingMethod;
+  if(tpl.separation) state.separation=Object.assign({}, tpl.separation);
+  if(tpl.lashing) state.lashing=Object.assign({}, tpl.lashing);
+  if(tpl.cogEnvelope) state.cogEnvelope=Object.assign({}, tpl.cogEnvelope);
+  // UI
+  const r=document.querySelector(`input[name="truck"][value="${state.truck}"]`); if(r){r.checked=true; document.querySelectorAll('.truck-card').forEach(c=>c.classList.remove('selected')); r.closest('.truck-card').classList.add('selected');}
+  document.querySelectorAll('#methodPicker .level').forEach(l=>l.classList.toggle('selected', l.dataset.method===state.loadingMethod));
+  if($('sepDest')) $('sepDest').value=state.separation.dest;
+  if($('sepAdr'))  $('sepAdr').value=state.separation.adr;
+  if($('lMu'))  $('lMu').value=state.lashing.mu;
+  if($('lLC'))  $('lLC').value=state.lashing.LC;
+  if($('lSTF')) $('lSTF').value=state.lashing.STF;
+  if($('lAng')) $('lAng').value=state.lashing.angle;
+  renderDestinations(); renderManualDestSelect(); renderItemsList();
+  buildTruckMesh(); clearItemMeshes(); clearCoGMarker(); clearLashingViz();
+  $('emptyState').style.display='block'; $('viewerScale').style.display='none'; $('viewerLegend').style.display='none';
+  $('itemCount').textContent=state.items.length;
+  closeItemDetails();
+  updateKPIs(); renderSequenceTable(); renderUnloaded(); updateStepper();
+  $('statusText').textContent=`✓ Escenario "${name}" cargado (${state.items.length} bultos)`;
+}
+function deleteTemplate(){
+  const name=$('tplSelect').value; if(!name) return;
+  if(!confirm(`Borrar escenario "${name}"?`)) return;
+  const list=loadTemplatesList().filter(t=>t.name!==name);
+  saveTemplatesList(list);
+  refreshTplSelect();
+  $('statusText').textContent=`🗑 Escenario "${name}" borrado`;
 }
 
 function exportCSV(){
@@ -3639,7 +3958,7 @@ function loadDemo(){
   for(const d of demo) for(let i=0;i<d.qty;i++){
     state.items.push(makeItem({ref:`${d.ref}/${i+1}`,type:d.type,L:d.L,A:d.A,H:d.H,weight:d.weight,destination:d.destination,stackable:d.stackable,fragile:d.fragile,maxTop:d.maxTop,adr:d.adr||null,noStackTop:d.noStackTop===true}));
   }
-  renderDestinations(); renderManualDestSelect();
+  renderDestinations(); renderManualDestSelect(); renderItemsList();
   $('fileStatus').textContent=`✓ Demo: ${state.items.length} bultos, 3 destinos`;
   $('itemCount').textContent=state.items.length;
   updateStepper();
@@ -4309,6 +4628,7 @@ function init(){
     for(let i=0;i<Q;i++) state.items.push(makeItem({ref:Q>1?`${ref}/${i+1}`:ref,type,L,A,H,weight:W,destination:dest,stackable:stk,fragile:frag,maxTop,adr,noStackTop:noTop}));
     $('fileStatus').textContent=`✓ ${Q} bulto${Q!==1?'s':''} añadido${Q!==1?'s':''}`;
     $('itemCount').textContent=state.items.length;
+    renderItemsList();
     updateStepper();
   });
 
@@ -4347,6 +4667,7 @@ function init(){
     $('emptyState').style.display='block'; $('fileStatus').textContent='';
     $('viewerScale').style.display='none'; $('viewerLegend').style.display='none';
     closeItemDetails();
+    renderItemsList();
     updateKPIs(); renderSequenceTable(); renderUnloaded(); updateStepper();
   });
   $('btnDemo').addEventListener('click',()=>{loadDemo(); setTimeout(runOptimization,200);});
@@ -4402,6 +4723,26 @@ function init(){
   $('btnDocCtu').addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateCtuDoc(),'Certificado CTU');});
   $('btnDocSimple').addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateSimpleCertDoc(),'Albarán de arrumazón');});
   $('btnDocPacking').addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generatePackingListDoc(),'Packing list final');});
+  // Item edit modal + list + templates + XLSX
+  { const el=$('btnClearItems'); if(el) el.addEventListener('click',()=>{
+    if(!state.items.length) return;
+    if(!confirm('Vaciar la lista de bultos?')) return;
+    state.items=[]; state.placed=[]; state.unloaded=[]; state.selectedItem=null;
+    clearItemMeshes(); clearCoGMarker(); clearLashingViz();
+    renderItemsList(); updateKPIs(); renderSequenceTable(); renderUnloaded(); updateStepper();
+    $('emptyState').style.display='block'; $('itemCount').textContent='0';
+    closeItemDetails();
+  }); }
+  { const el=$('iemSave'); if(el) el.addEventListener('click',saveItemEdit); }
+  { const el=$('iemDup');  if(el) el.addEventListener('click',duplicateItem); }
+  { const el=$('iemDel');  if(el) el.addEventListener('click',deleteCurrentItem); }
+  $('itemEditModal').addEventListener('click',e=>{if(e.target===$('itemEditModal')) $('itemEditModal').classList.remove('open');});
+  { const el=$('btnSaveTpl'); if(el) el.addEventListener('click',saveTemplate); }
+  { const el=$('btnLoadTpl'); if(el) el.addEventListener('click',loadTemplate); }
+  { const el=$('btnDelTpl');  if(el) el.addEventListener('click',deleteTemplate); }
+  { const el=$('btnExportXLSX'); if(el) el.addEventListener('click',exportXLSX); }
+  refreshTplSelect();
+  renderItemsList();
   { const el=$('btnDocLash'); if(el) el.addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateLashingDoc(),'Plan de amarre / trinca');}); }
   { const el=$('btnDocOrigin'); if(el) el.addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateOriginInstructionsDoc(),'Instrucciones almacén consolidador');}); }
   { const el=$('btnDocDest'); if(el) el.addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateDestinationInstructionsDoc(),'Instrucciones almacenes receptores');}); }
