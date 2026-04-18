@@ -1412,8 +1412,17 @@ select{cursor:pointer}
   color:var(--ink);
   cursor:pointer;
   transition:all .18s;
+  opacity:0.78;
 }
-.fab:hover{border-color:var(--accent); color:var(--accent); transform:translateY(-1px)}
+.fab:hover,.fab:focus-visible,.fab:active{opacity:1; border-color:var(--accent); color:var(--accent); transform:translateY(-1px)}
+@media(orientation:landscape) and (max-height:520px){
+  .fab-left{bottom:10px; left:10px}
+  .fab-right{bottom:10px; right:10px}
+  .fab{padding:6px 9px; font-size:10px; opacity:0.55}
+  .fab:hover,.fab:focus-visible,.fab:active{opacity:1}
+  .fab svg{width:13px; height:13px}
+  .fab-badge{font-size:8.5px; min-width:15px; height:15px}
+}
 .fab svg{flex-shrink:0}
 .fab-badge{
   display:inline-grid; place-items:center;
@@ -1873,6 +1882,26 @@ select{cursor:pointer}
       <div id="adrInvList" class="rec-grid"></div>
     </section>
 
+    <section class="axle-section" id="lashSection" style="display:none">
+      <header class="section-head">
+        <div class="section-num">L</div>
+        <h2 class="section-title">Amarre / trinca</h2>
+        <span class="hint">EN 12195-1</span>
+      </header>
+      <div class="form-grid-2" style="margin-bottom:8px">
+        <label class="field"><span class="field-label">μ fricción</span><input type="number" id="lMu" value="0.5" step="0.05" min="0.1" max="0.9"></label>
+        <label class="field"><span class="field-label">LC correa <em>daN</em></span><input type="number" id="lLC" value="2500" min="500" max="10000" step="100"></label>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:8px">
+        <label class="field"><span class="field-label">STF pretensión <em>daN</em></span><input type="number" id="lSTF" value="400" min="100" max="1000" step="10"></label>
+        <label class="field"><span class="field-label">Ángulo <em>°</em></span><input type="number" id="lAng" value="80" min="30" max="90" step="5"></label>
+      </div>
+      <div id="lashResult" class="rec-grid"></div>
+      <div class="mini-actions">
+        <button class="btn-ghost" type="button" id="btnLashViz">Mostrar en 3D</button>
+      </div>
+    </section>
+
     <section class="seq-section">
       <header class="section-head">
         <div class="section-num">07</div>
@@ -2143,8 +2172,42 @@ const state = {
   loadingMethod: 'lifo',          // 'lifo' | 'fifo' | 'weight' | 'manual'
   separation: {dest: 5, adr: 40}, // cm: entre destinos / entre ADR incompatibles
   showCoG: true,
-  cogEnvelope: {xMin:0.2, xMax:0.7, zHalf:0.35} // fracciones de truck.L y truck.A/2
+  cogEnvelope: {xMin:0.2, xMax:0.7, zHalf:0.35}, // fracciones de truck.L y truck.A/2
+  showLashing: false,
+  lashing: {mu:0.5, cFwd:0.8, cLat:0.5, LC:2500, STF:400, angle:80}  // EN 12195-1
 };
+// Deceleración normativa (fuerzas de inercia relativas): 0.8g frontal, 0.5g lateral/trasero
+const LASH_GRAVITY = 9.81;
+
+function computeLashing(placed, params){
+  const p = Object.assign({}, state.lashing, params||{});
+  const byDest={};
+  for(const it of placed) (byDest[it.destination||'—']=byDest[it.destination||'—']||[]).push(it);
+  const groups=[];
+  const sin=Math.sin(p.angle*Math.PI/180);
+  for(const [dest, items] of Object.entries(byDest)){
+    const m = items.reduce((s,x)=>s+x.weight, 0);
+    const W = m*LASH_GRAVITY; // N
+    const Fx = Math.max(0, W*(p.cFwd - p.mu));   // N, forward
+    const Fy = Math.max(0, W*(p.cLat - p.mu));   // N, lateral
+    const FxDaN = Fx/10, FyDaN = Fy/10;
+    const denom = 2*p.mu*p.STF*sin;   // friction lashing capacity per strap (daN)
+    const nFric = denom>0?Math.ceil(Math.max(FxDaN, FyDaN)/denom):0;
+    const nDirect = p.LC>0?Math.ceil(FxDaN/(p.LC*Math.cos(30*Math.PI/180))):0;
+    const hasFragile = items.some(i=>i.fragile);
+    const hasAdr = items.some(i=>i.adr);
+    groups.push({dest, items:items.length, mass:m, FxDaN, FyDaN, nFric:Math.max(0,nFric), nDirect:Math.max(0,nDirect), hasFragile, hasAdr});
+  }
+  const total = placed.reduce((s,x)=>s+x.weight,0);
+  const TotalW=total*LASH_GRAVITY;
+  return {
+    groups,
+    mass: total,
+    FxDaN: total>0?(TotalW*(p.cFwd-p.mu))/10:0,
+    FyDaN: total>0?(TotalW*(p.cLat-p.mu))/10:0,
+    params: p
+  };
+}
 
 // ===== ADR (ADR 2023 · matriz simplificada de segregación) =====
 // Mapea clase -> clases incompatibles. Solo casos mas comunes en transporte por carretera.
@@ -2608,29 +2671,47 @@ function initThree(){
     lastMouse={x:e.clientX,y:e.clientY};
   });
   canvas.addEventListener('wheel',e=>{e.preventDefault(); controls.targetZoom*=(1-e.deltaY*0.001); controls.targetZoom=Math.max(0.2,Math.min(5,controls.targetZoom));});
-  // Touch: drag + tap
+  // Touch: drag + tap + pinch-zoom
   let tPressPos=null, tPressTime=0, tActive=false, lastTouch=null;
+  let pinchDist=0;
   canvas.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1) return;
-    const t=e.touches[0]; tActive=true; lastTouch={x:t.clientX,y:t.clientY};
-    tPressPos={x:t.clientX,y:t.clientY}; tPressTime=Date.now();
+    if(e.touches.length===2){
+      const a=e.touches[0], b=e.touches[1];
+      pinchDist=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+      tActive=false; tPressPos=null;
+    } else if(e.touches.length===1){
+      const t=e.touches[0]; tActive=true; lastTouch={x:t.clientX,y:t.clientY};
+      tPressPos={x:t.clientX,y:t.clientY}; tPressTime=Date.now();
+    }
   },{passive:true});
   canvas.addEventListener('touchmove',e=>{
-    if(!tActive||e.touches.length!==1) return;
-    const t=e.touches[0];
-    const dx=t.clientX-lastTouch.x, dy=t.clientY-lastTouch.y;
-    controls.targetX+=dx*0.5; controls.targetY+=dy*0.5; controls.targetY=Math.max(-89,Math.min(89,controls.targetY));
-    lastTouch={x:t.clientX,y:t.clientY};
-  },{passive:true});
+    if(e.touches.length===2){
+      e.preventDefault();
+      const a=e.touches[0], b=e.touches[1];
+      const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+      if(pinchDist>0){
+        const ratio=d/pinchDist;
+        controls.targetZoom*=ratio;
+        controls.targetZoom=Math.max(0.2, Math.min(5, controls.targetZoom));
+      }
+      pinchDist=d;
+    } else if(tActive && e.touches.length===1){
+      const t=e.touches[0];
+      const dx=t.clientX-lastTouch.x, dy=t.clientY-lastTouch.y;
+      controls.targetX+=dx*0.5; controls.targetY+=dy*0.5; controls.targetY=Math.max(-89,Math.min(89,controls.targetY));
+      lastTouch={x:t.clientX,y:t.clientY};
+    }
+  },{passive:false});
   canvas.addEventListener('touchend',e=>{
+    if(e.touches.length<2) pinchDist=0;
     if(tPressPos){
       const ct=(e.changedTouches&&e.changedTouches[0])||null;
       if(ct){
         const mv=Math.hypot(ct.clientX-tPressPos.x, ct.clientY-tPressPos.y);
-        if(mv<8 && Date.now()-tPressTime<400) handleCanvasTap(ct.clientX, ct.clientY);
+        if(mv<8 && Date.now()-tPressTime<400 && e.touches.length===0) handleCanvasTap(ct.clientX, ct.clientY);
       }
     }
-    tActive=false; tPressPos=null;
+    if(e.touches.length===0){tActive=false; tPressPos=null;}
   });
   window.addEventListener('resize',()=>{const r=canvas.parentElement.getBoundingClientRect(); renderer.setSize(r.width,r.height); camera.aspect=r.width/r.height; camera.updateProjectionMatrix();});
 
@@ -2740,6 +2821,7 @@ function buildItemMeshes(placed){
     scene.add(mesh); itemMeshes.push(mesh);
   }
   buildCoGMarker();
+  buildLashingViz();
 }
 
 function makeAdrLabel(cls){
@@ -3234,6 +3316,7 @@ function updateKPIs(){
 
   renderRecommendations(m, truck);
   renderAdrInventory();
+  renderLashing();
 
   $('statusText').textContent = `${placed.length} bultos · ${m.volPct.toFixed(0)}% · ${Math.round(m.totalW).toLocaleString()} kg`;
 
@@ -3290,6 +3373,68 @@ function renderRecommendations(m, truck){
   if(m.volPct<60) recs.push({level:'warn',title:'Ocupación baja',detail:`${m.volPct.toFixed(0)}% — considera grupaje adicional`});
 
   rg.innerHTML=recs.map(r=>`<div class="rec-item"><span class="rec-dot ${r.level}"></span><div class="rec-text"><div class="rec-title">${r.title}</div>${r.detail?`<div class="rec-detail">${r.detail}</div>`:''}</div></div>`).join('');
+}
+
+function renderLashing(){
+  const sec=$('lashSection'); if(!sec) return;
+  if(!state.placed.length){sec.style.display='none'; return;}
+  sec.style.display='block';
+  // Recoger parametros desde UI
+  const mu=parseFloat($('lMu').value)||state.lashing.mu;
+  const LC=parseFloat($('lLC').value)||state.lashing.LC;
+  const STF=parseFloat($('lSTF').value)||state.lashing.STF;
+  const ang=parseFloat($('lAng').value)||state.lashing.angle;
+  state.lashing.mu=mu; state.lashing.LC=LC; state.lashing.STF=STF; state.lashing.angle=ang;
+  const data=computeLashing(state.placed);
+  const out=$('lashResult');
+  const card=(lvl,title,detail)=>`<div class="rec-item"><span class="rec-dot ${lvl}"></span><div class="rec-text"><div class="rec-title">${title}</div>${detail?`<div class="rec-detail">${detail}</div>`:''}</div></div>`;
+  const pieces=[];
+  pieces.push(card('ok', `Fuerza frontal (0.8g) · ${Math.round(data.FxDaN).toLocaleString()} daN`, `Lateral (0.5g) · ${Math.round(data.FyDaN).toLocaleString()} daN — masa total ${Math.round(data.mass).toLocaleString()} kg`));
+  for(const g of data.groups){
+    const lvl=g.nFric>6?'bad':(g.nFric>3?'warn':'ok');
+    const extra=[];
+    if(g.hasAdr) extra.push('ADR');
+    if(g.hasFragile) extra.push('frágiles');
+    pieces.push(card(lvl, `${g.dest} · ${g.nFric} correa${g.nFric!==1?'s':''} sobre-lona`,
+      `alt: ${g.nDirect} amarres directos @30° LC ${LC} daN · Fx ${Math.round(g.FxDaN).toLocaleString()} daN · ${g.items} bultos / ${Math.round(g.mass).toLocaleString()} kg${extra.length?' · '+extra.join(' + '):''}`));
+  }
+  out.innerHTML=pieces.join('');
+}
+
+// ===== 3D viz de amarres =====
+let lashGroup=null;
+function clearLashingViz(){
+  if(lashGroup){scene.remove(lashGroup); lashGroup.traverse(o=>{if(o.geometry)o.geometry.dispose(); if(o.material){if(Array.isArray(o.material))o.material.forEach(mm=>mm.dispose()); else o.material.dispose();}}); lashGroup=null;}
+}
+function buildLashingViz(){
+  clearLashingViz();
+  if(!state.showLashing||!state.placed.length) return;
+  const t=TRUCKS[state.truck]; const A=t.A/100;
+  const byDest={}; for(const p of state.placed) (byDest[p.destination]=byDest[p.destination]||[]).push(p);
+  lashGroup=new THREE.Group();
+  const data=computeLashing(state.placed);
+  const byDestN={}; data.groups.forEach(g=>byDestN[g.dest]=g.nFric);
+  for(const [dest, grp] of Object.entries(byDest)){
+    let x1=Infinity,x2=-Infinity,y2=-Infinity;
+    for(const p of grp){
+      x1=Math.min(x1,p.x/100); x2=Math.max(x2,(p.x+p.L)/100);
+      y2=Math.max(y2,(p.y+p.H)/100);
+    }
+    const n=Math.max(1, byDestN[dest]||1);
+    const spacing=(x2-x1)/(n+1);
+    const col=new THREE.Color(destColorFor(dest)).getHex();
+    for(let i=1;i<=n;i++){
+      const x=x1+spacing*i;
+      const pts=[new THREE.Vector3(x, 0.01, -A/2), new THREE.Vector3(x, y2+0.04, 0), new THREE.Vector3(x, 0.01, A/2)];
+      const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.9}));
+      lashGroup.add(line);
+      // anclas en los raíles: esferas pequeñas
+      const anchorMat=new THREE.MeshBasicMaterial({color:col});
+      const a1=new THREE.Mesh(new THREE.SphereGeometry(0.05,10,10),anchorMat); a1.position.set(x,0.02,-A/2); lashGroup.add(a1);
+      const a2=new THREE.Mesh(new THREE.SphereGeometry(0.05,10,10),anchorMat); a2.position.set(x,0.02, A/2); lashGroup.add(a2);
+    }
+  }
+  scene.add(lashGroup);
 }
 
 function renderAdrInventory(){
@@ -3704,9 +3849,68 @@ function generatePackingListDoc(){
   return pages;
 }
 
+function generateLashingDoc(){
+  const num=state._docNum||genDocNumber();
+  const truck=TRUCKS[state.truck];
+  const data=computeLashing(state.placed);
+  const p=data.params;
+  const rows=data.groups.map(g=>`
+    <tr>
+      <td style="padding:5px;border:1px solid #ddd">${g.dest}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:right">${g.items}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:right">${Math.round(g.mass).toLocaleString()}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:right">${Math.round(g.FxDaN).toLocaleString()}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:right">${Math.round(g.FyDaN).toLocaleString()}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:center;font-weight:700;color:#c2410c">${g.nFric}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:center">${g.nDirect}</td>
+    </tr>
+  `).join('');
+  return [`<div class="doc-sheet">${docHeader('PLAN DE AMARRE / TRINCA','EN 12195-1 · grupaje terrestre',num)}
+    <div style="font-size:9.5pt;color:#333;line-height:1.6;margin-bottom:14px">
+      Parámetros de cálculo — μ fricción <b>${p.mu}</b> · aceleración frontal <b>${p.cFwd}g</b> · lateral <b>${p.cLat}g</b> · pretensión STF <b>${p.STF} daN</b> · LC por correa <b>${p.LC} daN</b> · ángulo sobre-lona <b>${p.angle}°</b>.
+    </div>
+    <div style="background:#fff7ed;border-left:3px solid #f97316;padding:10px 12px;margin-bottom:14px;font-size:9pt;color:#7c2d12">
+      Cumplimiento normativo aproximado. Revisa siempre EN 12195-1, reglamento CMR y las condiciones reales del vehículo (puntos de anclaje homologados, tipo de correas, DIN/ISO de eslingas).
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:14px">
+      <thead>
+        <tr style="background:#f4f4f5">
+          <th style="padding:6px;border:1px solid #ddd;text-align:left">Destino</th>
+          <th style="padding:6px;border:1px solid #ddd;text-align:right">Bultos</th>
+          <th style="padding:6px;border:1px solid #ddd;text-align:right">Peso (kg)</th>
+          <th style="padding:6px;border:1px solid #ddd;text-align:right">Fx (daN)</th>
+          <th style="padding:6px;border:1px solid #ddd;text-align:right">Fy (daN)</th>
+          <th style="padding:6px;border:1px solid #ddd;text-align:center">Sobre-lona</th>
+          <th style="padding:6px;border:1px solid #ddd;text-align:center">Directos 30°</th>
+        </tr>
+      </thead>
+      <tbody>${rows||'<tr><td colspan="7" style="padding:12px;text-align:center;color:#888">— sin bultos —</td></tr>'}</tbody>
+      <tfoot>
+        <tr style="background:#fafafa;font-weight:700">
+          <td style="padding:6px;border:1px solid #ddd">TOTAL</td>
+          <td style="padding:6px;border:1px solid #ddd;text-align:right">${state.placed.length}</td>
+          <td style="padding:6px;border:1px solid #ddd;text-align:right">${Math.round(data.mass).toLocaleString()}</td>
+          <td style="padding:6px;border:1px solid #ddd;text-align:right">${Math.round(data.FxDaN).toLocaleString()}</td>
+          <td style="padding:6px;border:1px solid #ddd;text-align:right">${Math.round(data.FyDaN).toLocaleString()}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+    <h3 style="font-size:10pt;margin:16px 0 6px 0">Recomendaciones operativas</h3>
+    <ul style="font-size:9pt;color:#333;line-height:1.6;padding-left:18px">
+      <li>Colocar <b>piezas pesadas al fondo</b> y bajar el CdG para cumplir el envolvente (ver plano de carga).</li>
+      <li>Separar bultos ADR incompatibles mínimo ${state.separation.adr} cm según matriz de segregación (ver certificado ADR si aplica).</li>
+      <li>Usar <b>esquineras</b> sobre palets y bultos frágiles antes de ceñir la correa.</li>
+      <li>Verificar ángulo real de ceñido: &gt;80° maximiza fricción; si &lt;30° considera amarre directo/cruz.</li>
+      <li>Revisar amarres cada <b>80 km</b> o tras frenadas bruscas — especialmente en las primeras horas.</li>
+    </ul>
+    ${docFooter('Plan de amarre · conforme a EN 12195-1')}
+  </div>`];
+}
+
 function generateFullDossier(){
   state._docNum=genDocNumber();
-  return [...generatePlanoDoc(),...generateCtuDoc(),...generateSimpleCertDoc(),...generatePackingListDoc()];
+  return [...generatePlanoDoc(),...generateCtuDoc(),...generateSimpleCertDoc(),...generateLashingDoc(),...generatePackingListDoc()];
 }
 
 function showDoc(pages,title){
@@ -3913,6 +4117,14 @@ function init(){
   { const el=$('btnShowAdr'); if(el) el.addEventListener('click',openAdrMatrix); }
   { const el=$('btnShowAdr2'); if(el) el.addEventListener('click',openAdrMatrix); }
   { const el=$('btnProposals'); if(el) el.addEventListener('click',runProposals); }
+  // Lashing inputs + viz toggle
+  ['lMu','lLC','lSTF','lAng'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',()=>{renderLashing(); if(state.showLashing) buildLashingViz();});});
+  { const el=$('btnLashViz'); if(el) el.addEventListener('click',()=>{
+    state.showLashing=!state.showLashing;
+    el.classList.toggle('on', state.showLashing);
+    el.textContent=state.showLashing?'Ocultar en 3D':'Mostrar en 3D';
+    buildLashingViz();
+  }); }
   $('adrModal').addEventListener('click',e=>{if(e.target===$('adrModal')) $('adrModal').classList.remove('open');});
   $('propModal').addEventListener('click',e=>{if(e.target===$('propModal')) $('propModal').classList.remove('open');});
 
