@@ -905,6 +905,28 @@ select{cursor:pointer}
 .btn-ghost.btn-small{padding:6px 10px; font-size:11px}
 
 /* ================================================================
+   PROPOSALS MODAL
+   ================================================================ */
+.prop-modal{max-width:780px !important}
+.prop-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:8px}
+.prop-card{background:var(--bg-2); border:1px solid var(--line); border-radius:12px; padding:14px; cursor:pointer; transition:all .15s}
+.prop-card:hover{border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,0.25)}
+.prop-card.best{border-color:var(--ac-green)}
+.prop-card h3{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:var(--ink); margin-bottom:4px; display:flex; align-items:center; gap:6px}
+.prop-card .prop-tag{font-size:9px; font-weight:700; padding:2px 6px; border-radius:999px; background:var(--ac-green); color:#0a0a0a; letter-spacing:.08em; text-transform:uppercase}
+.prop-card .prop-desc{font-size:11px; color:var(--ink-dim); margin-bottom:10px; line-height:1.4}
+.prop-card dl{display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; margin-bottom:10px}
+.prop-card dt{font-size:9px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.06em; font-weight:600; margin-bottom:2px}
+.prop-card dd{font-size:13px; font-weight:700; color:var(--ink); font-family:'JetBrains Mono',monospace}
+.prop-card dd.warn{color:var(--ac-amber)}
+.prop-card dd.bad{color:var(--ac-red)}
+.prop-card .prop-apply{
+  width:100%; padding:8px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#0a0a0a;
+  font-family:inherit; font-weight:700; font-size:12px; cursor:pointer;
+}
+.prop-running{text-align:center; padding:40px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; font-size:12px}
+
+/* ================================================================
    SEQUENCE TABLE
    ================================================================ */
 .seq-wrap{
@@ -1684,6 +1706,7 @@ select{cursor:pointer}
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
         Optimizar carga
       </button>
+      <button class="btn-ghost btn-full" id="btnProposals" style="margin-top:6px">🧪 Proponer 3 variantes</button>
       <div class="mini-actions">
         <button class="btn-ghost" id="btnDemo">Cargar demo</button>
         <button class="btn-ghost" id="btnClear">Limpiar</button>
@@ -1944,6 +1967,17 @@ select{cursor:pointer}
     <div class="id-label">ADR</div>
     <div class="id-adr" id="idAdr"></div>
     <div class="id-compl" id="idCompl"></div>
+  </div>
+</div>
+
+<!-- ============ PROPOSALS MODAL ============ -->
+<div class="modal-mask" id="propModal">
+  <div class="modal prop-modal">
+    <button class="modal-close" data-close-modal="propModal">×</button>
+    <h2>Propuestas alternativas</h2>
+    <p class="modal-lead">Se generan 3 variantes con distinta estrategia. Revisa los KPIs y aplica la que prefieras.</p>
+    <div class="prop-grid" id="propGrid"></div>
+    <p class="modal-foot" id="propStatus"></p>
   </div>
 </div>
 
@@ -2935,6 +2969,90 @@ function applyItemAction(id, act){
   buildItemMeshes(state.placed);
   openItemDetails(p);
   updateKPIs();
+  $('statusText').textContent='✎ Flag actualizado — re-optimiza para recalcular la estiba';
+}
+
+// ===== Propuestas alternativas =====
+async function runProposals(){
+  if(!state.items.length){$('statusText').textContent='Sin bultos para proponer'; return;}
+  $('propModal').classList.add('open');
+  $('propGrid').innerHTML='<div class="prop-running">Generando variantes… (puede tardar ~10s)</div>';
+  $('propStatus').textContent='';
+  const truck=TRUCKS[state.truck];
+  const savedMethod=state.loadingMethod;
+  const savedSepDest=state.separation.dest;
+  const savedSepAdr=state.separation.adr;
+  const variants=[
+    {name:'Tu configuración', desc:'Método y separadores actuales · optimización rápida', method:savedMethod, sepDest:savedSepDest, sepAdr:savedSepAdr},
+    {name:'Pesado al fondo', desc:'Método por peso · lastre bajo, mejor estabilidad', method:'weight', sepDest:savedSepDest, sepAdr:savedSepAdr},
+    {name:'Compacto', desc:'Separación mínima · maximiza volumen y metros lineales', method:savedMethod, sepDest:0, sepAdr:Math.min(savedSepAdr, 10)}
+  ];
+  const results=[];
+  for(const v of variants){
+    state.loadingMethod=v.method;
+    state.separation.dest=v.sepDest;
+    state.separation.adr=v.sepAdr;
+    try{
+      const r=await optimize(state.items, truck, state.destinations, 'balanced', null);
+      const sorted=[...r.placed].sort((a,b)=>a.x-b.x||a.y-b.y||a.z-b.z);
+      sorted.forEach((p,i)=>p.loadSeq=i+1);
+      const metrics=computeMetrics(sorted, truck);
+      results.push({...v, placed:sorted, unloaded:r.unloaded, metrics});
+    }catch(e){
+      results.push({...v, placed:[], unloaded:state.items.slice(), metrics:computeMetrics([], truck), error:e.message});
+    }
+  }
+  state.loadingMethod=savedMethod;
+  state.separation.dest=savedSepDest;
+  state.separation.adr=savedSepAdr;
+  // Mejor: mas bultos colocados, mayor volumen, cog ok bonifica
+  let best=results[0], bestSc=-Infinity;
+  for(const r of results){
+    const sc=r.placed.length*1e6 + r.metrics.volPct*100 + (r.metrics.cogOk?50:0) - r.unloaded.length*1e9;
+    if(sc>bestSc){bestSc=sc; best=r;}
+  }
+  renderProposals(results, best);
+}
+
+function renderProposals(variants, best){
+  const grid=$('propGrid');
+  grid.innerHTML=variants.map((v,i)=>{
+    const m=v.metrics;
+    const isBest=v===best;
+    const cogCls=m.cogOk?'':'bad';
+    const kgCls=m.weightPct>100?'bad':(m.weightPct>90?'warn':'');
+    const ulCls=v.unloaded.length?'warn':'';
+    return `<div class="prop-card${isBest?' best':''}" data-idx="${i}">
+      <h3>${v.name}${isBest?'<span class="prop-tag">Recomendado</span>':''}</h3>
+      <div class="prop-desc">${v.desc}</div>
+      <dl>
+        <div><dt>Volumen</dt><dd>${m.volPct.toFixed(0)}%</dd></div>
+        <div><dt>Bultos</dt><dd class="${ulCls}">${v.placed.length}${v.unloaded.length?' / '+(v.placed.length+v.unloaded.length):''}</dd></div>
+        <div><dt>Metros lin.</dt><dd>${m.lm.toFixed(2)} m</dd></div>
+        <div><dt>Peso</dt><dd class="${kgCls}">${Math.round(m.totalW).toLocaleString()} kg</dd></div>
+        <div><dt>CdG x/L</dt><dd class="${cogCls}">${(m.cogXFrac*100).toFixed(0)}%</dd></div>
+        <div><dt>CdG alt.</dt><dd>${(m.cogY/100).toFixed(2)} m</dd></div>
+      </dl>
+      <button class="prop-apply" type="button">Aplicar esta variante</button>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.prop-card').forEach(card=>card.addEventListener('click',()=>{
+    const idx=+card.dataset.idx; const v=variants[idx];
+    state.placed=v.placed; state.unloaded=v.unloaded;
+    state.loadingMethod=v.method;
+    state.separation.dest=v.sepDest;
+    state.separation.adr=v.sepAdr;
+    state.optMeta={iterations:20, bestIter:0, level:'balanced', timestamp:new Date().toISOString()};
+    document.querySelectorAll('#methodPicker .level').forEach(x=>x.classList.toggle('selected', x.dataset.method===v.method));
+    const se=$('sepDest'); if(se) se.value=v.sepDest;
+    const sa=$('sepAdr');  if(sa) sa.value=v.sepAdr;
+    $('emptyState').style.display='none';
+    buildItemMeshes(state.placed);
+    updateKPIs(); renderSequenceTable(); renderUnloaded(); renderLegend(); fitView();
+    $('propModal').classList.remove('open');
+    $('statusText').textContent=`✓ Variante "${v.name}" aplicada`;
+  }));
+  $('propStatus').textContent='Click en cualquier tarjeta para aplicar esa variante · los cambios no bloquean la optimización manual posterior';
 }
 
 // ===== ADR matrix modal =====
@@ -3790,11 +3908,13 @@ function init(){
   $('vcExplode').addEventListener('click',(e)=>{state.exploded=!state.exploded; e.currentTarget.classList.toggle('active'); if(state.placed.length)buildItemMeshes(state.placed);});
   $('vcTransp').addEventListener('click',(e)=>{state.transparent=!state.transparent; e.currentTarget.classList.toggle('active'); if(state.placed.length)buildItemMeshes(state.placed);});
 
-  // item detail + ADR matrix
+  // item detail + ADR matrix + propuestas
   { const el=$('idClose'); if(el) el.addEventListener('click',()=>{state.selectedItem=null; if(state.placed.length) buildItemMeshes(state.placed); closeItemDetails();}); }
   { const el=$('btnShowAdr'); if(el) el.addEventListener('click',openAdrMatrix); }
   { const el=$('btnShowAdr2'); if(el) el.addEventListener('click',openAdrMatrix); }
+  { const el=$('btnProposals'); if(el) el.addEventListener('click',runProposals); }
   $('adrModal').addEventListener('click',e=>{if(e.target===$('adrModal')) $('adrModal').classList.remove('open');});
+  $('propModal').addEventListener('click',e=>{if(e.target===$('propModal')) $('propModal').classList.remove('open');});
 
   // help + theme
   $('btnHelp').addEventListener('click',()=>$('helpModal').classList.add('open'));
