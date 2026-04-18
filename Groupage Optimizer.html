@@ -1946,6 +1946,18 @@ select{cursor:pointer}
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>
           Packing final
         </button>
+        <button class="doc-btn" id="btnDocLash">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 17h16M7 4v16M17 4v16"/></svg>
+          Plan de amarre
+        </button>
+        <button class="doc-btn" id="btnDocOrigin">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-6 9 6v11a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>
+          Instr. almacén origen
+        </button>
+        <button class="doc-btn" id="btnDocDest">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Instr. destinos
+        </button>
       </div>
       <button class="btn-accent btn-full" id="btnDocAll" style="margin-top:8px">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"/></svg>
@@ -3908,9 +3920,250 @@ function generateLashingDoc(){
   </div>`];
 }
 
+// ============================================================
+// INSTRUCCIONES OPERATIVAS (origen / destinos)
+// ============================================================
+function _placedSortedForLoad(){
+  return [...state.placed].sort((a,b)=>a.loadSeq-b.loadSeq);
+}
+function _remontsInfo(){
+  // Mapea cada bulto a los que lleva encima para indicar apilados
+  const out={};
+  for(const p of state.placed){
+    if(p.supporters && p.supporters.length){
+      for(const sid of p.supporters){
+        (out[sid]=out[sid]||[]).push(p);
+      }
+    }
+  }
+  return out;
+}
+function _adrSummaryForItems(items){
+  const classes=[...new Set(items.filter(i=>i.adr).map(i=>i.adr))].sort();
+  if(!classes.length) return {classes:[], html:''};
+  let conflicts=[];
+  for(let i=0;i<classes.length;i++) for(let j=i+1;j<classes.length;j++) if(adrConflict(classes[i],classes[j])) conflicts.push([classes[i],classes[j]]);
+  const chips=classes.map(c=>{
+    const info=ADR_CLASSES[c]||{label:'',color:'#ef4444'};
+    return `<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:${info.color};color:#0a0a0a;font-weight:700;font-size:9pt;margin:2px 4px 2px 0">Clase ${c} · ${info.label}</span>`;
+  }).join('');
+  let conflictHtml='';
+  if(conflicts.length){
+    conflictHtml=`<div style="background:#fef2f2;border-left:3px solid #ef4444;padding:8px 10px;margin-top:6px;font-size:9pt;color:#7f1d1d">⚠ <b>Clases incompatibles a bordo</b>: ${conflicts.map(c=>c.join('↔')).join(' · ')} — mantener separación mínima de ${state.separation.adr} cm y comprobar carta de porte ADR.</div>`;
+  }
+  return {classes, html:`${chips}${conflictHtml}`};
+}
+
+function generateOriginInstructionsDoc(){
+  const num=state._docNum||genDocNumber();
+  const truck=TRUCKS[state.truck];
+  const sorted=_placedSortedForLoad();
+  const remonts=_remontsInfo();
+  const adr=_adrSummaryForItems(sorted);
+  const method=({lifo:'LIFO · último cargado · primero descargado',fifo:'FIFO · primero cargado · primero descargado',weight:'Por peso · pesado al fondo',manual:'Manual · orden definido'})[state.loadingMethod]||state.loadingMethod;
+  const destOrderHtml=state.destinations.map((d,i)=>`<span style="display:inline-block;padding:3px 8px;border-radius:4px;background:${d.color}22;border:1px solid ${d.color};color:#333;font-weight:600;font-size:9pt;margin:2px 4px 2px 0">${i+1}. ${d.name}</span>`).join('');
+  const rows=sorted.map(p=>{
+    const top=remonts[p.id]?remonts[p.id].map(x=>x.ref||'(sin ref)').join(', '):'—';
+    const obs=[];
+    if(p.fragile) obs.push('<b style="color:#b91c1c">FRÁGIL</b>');
+    if(p.noStackTop) obs.push('<b style="color:#b91c1c">NO APILAR ENCIMA</b>');
+    if(p.maxTop>0) obs.push(`máx. encima ${p.maxTop} kg`);
+    if(p.adr){const ai=ADR_CLASSES[p.adr]; obs.push(`<span style="background:${ai.color};color:#0a0a0a;padding:1px 6px;border-radius:3px;font-weight:700">ADR ${p.adr}</span>`);}
+    if(p.stackedOn) obs.push(`apilado sobre ${p.stackedOn}`);
+    return `<tr>
+      <td style="padding:5px;border:1px solid #ddd;text-align:center;font-weight:700">${String(p.loadSeq).padStart(3,'0')}</td>
+      <td style="padding:5px;border:1px solid #ddd">${p.ref||'(sin ref)'}</td>
+      <td style="padding:5px;border:1px solid #ddd"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${destColorFor(p.destination)};margin-right:5px"></span>${p.destination}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:8.5pt">x ${Math.round(p.x)}·y ${Math.round(p.y)}·z ${Math.round(p.z)}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:right">${p.L}×${p.A}×${p.H}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:right">${Math.round(p.weight).toLocaleString()}</td>
+      <td style="padding:5px;border:1px solid #ddd;text-align:center">${p.stackable?'Sí':'No'}</td>
+      <td style="padding:5px;border:1px solid #ddd;font-size:8.5pt">${obs.join(' · ')||'—'}</td>
+    </tr>`;
+  }).join('');
+  const noStack=sorted.filter(p=>p.noStackTop||!p.stackable||p.fragile);
+  const noStackRows=noStack.length?noStack.map(p=>{
+    const why=[];
+    if(!p.stackable) why.push('no remontable');
+    if(p.noStackTop) why.push('no apilar encima');
+    if(p.fragile) why.push('frágil');
+    return `<li style="margin-bottom:3px"><b>${p.ref||'(sin ref)'}</b> · ${p.destination} · ${why.join(' + ')}</li>`;
+  }).join(''):'<li style="color:#888">— ninguno —</li>';
+  const lash=computeLashing(state.placed);
+  const lashRows=lash.groups.map(g=>`<tr><td style="padding:4px;border:1px solid #ddd">${g.dest}</td><td style="padding:4px;border:1px solid #ddd;text-align:right">${Math.round(g.mass).toLocaleString()} kg</td><td style="padding:4px;border:1px solid #ddd;text-align:center;font-weight:700">${g.nFric}</td></tr>`).join('');
+
+  const pages=[`<div class="doc-sheet">${docHeader('INSTRUCCIONES · ALMACÉN CONSOLIDADOR','Origen: '+state.origin,num)}
+    <div style="font-size:9pt;color:#333;margin-bottom:10px">
+      <b>Vehículo:</b> ${truck.name} · ${truck.L}×${truck.A}×${truck.H} cm · MMA ${truck.maxKg.toLocaleString()} kg ·
+      <b>Método:</b> ${method}
+    </div>
+    <div style="font-size:9pt;color:#333;margin-bottom:8px"><b>Orden de destinos (ruta de entrega):</b><br>${destOrderHtml}</div>
+
+    <h3 style="font-size:10pt;margin:14px 0 6px">1 · Secuencia de carga</h3>
+    <p style="font-size:8.5pt;color:#666;margin-bottom:6px">Cargar en orden ascendente (001 primero). x=0 es el fondo del vehículo (frente del remolque). La posición está en cm relativos a la esquina delantera-izquierda.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:8.5pt">
+      <thead><tr style="background:#f4f4f5">
+        <th style="padding:5px;border:1px solid #ddd">#</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:left">Ref</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:left">Destino</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:right">Pos (cm)</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:right">L×A×H</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:right">kg</th>
+        <th style="padding:5px;border:1px solid #ddd">Remont.</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:left">Observaciones</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${docFooter('Hoja 1/2 · secuencia')}</div>`,
+    `<div class="doc-sheet">${docHeader('INSTRUCCIONES · ALMACÉN CONSOLIDADOR','Separación · ADR · Apilado · Amarre',num)}
+    <h3 style="font-size:10pt;margin:0 0 6px">2 · Separación entre lotes</h3>
+    <ul style="font-size:9pt;color:#333;line-height:1.6;padding-left:18px;margin-bottom:14px">
+      <li>Separación mínima entre destinos: <b>${state.separation.dest} cm</b></li>
+      <li>Separación mínima entre ADR incompatibles: <b>${state.separation.adr} cm</b></li>
+      <li>Usa separadores de madera, cartón o airbags cuando el hueco supere 10 cm para evitar desplazamientos.</li>
+      <li>Marca el cambio de lote con cinta de color en el suelo para identificar cada destino desde la trasera.</li>
+    </ul>
+
+    <h3 style="font-size:10pt;margin:0 0 6px">3 · Mercancía ADR</h3>
+    ${adr.classes.length?`<div style="margin-bottom:8px">${adr.html}</div>
+      <ul style="font-size:9pt;color:#333;line-height:1.6;padding-left:18px;margin-bottom:14px">
+        <li>Etiquetar bultos con rombo de clase visible en 2 caras opuestas antes del cierre del remolque.</li>
+        <li>Preparar carta de porte ADR (ADR 5.4.1) y certificado de carga/descarga.</li>
+        <li>Verificar que el conductor porta EPI ADR (gafas, guantes, linterna ATEX) y extintores adicionales según clase.</li>
+        <li>No cargar a altura superior a 1/3 del alto del vehículo si hay clase 2 o 3 (riesgo de vuelco).</li>
+      </ul>`:'<p style="font-size:9pt;color:#666;margin-bottom:14px">No hay mercancía ADR en este envío.</p>'}
+
+    <h3 style="font-size:10pt;margin:0 0 6px">4 · Apilado y manipulación</h3>
+    <p style="font-size:9pt;color:#333;margin-bottom:4px">Bultos con restricciones:</p>
+    <ul style="font-size:9pt;color:#333;line-height:1.6;padding-left:18px;margin-bottom:10px">${noStackRows}</ul>
+    <p style="font-size:9pt;color:#333;margin-bottom:14px">Respeta el peso máximo encima indicado en la secuencia. Coloca esquineras de cartón sobre cualquier bulto sensible antes de apilar o amarrar.</p>
+
+    <h3 style="font-size:10pt;margin:0 0 6px">5 · Amarre / trinca (resumen)</h3>
+    <p style="font-size:9pt;color:#666;margin-bottom:4px">Parámetros: μ=${lash.params.mu} · 0.8g frontal · 0.5g lateral · STF ${lash.params.STF} daN · ángulo ${lash.params.angle}°</p>
+    <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:10px">
+      <thead><tr style="background:#f4f4f5">
+        <th style="padding:5px;border:1px solid #ddd;text-align:left">Destino</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:right">Peso</th>
+        <th style="padding:5px;border:1px solid #ddd;text-align:center">Correas sobre-lona</th>
+      </tr></thead>
+      <tbody>${lashRows||'<tr><td colspan="3" style="text-align:center;padding:6px;color:#888">—</td></tr>'}</tbody>
+    </table>
+    <p style="font-size:8.5pt;color:#666">Ver hoja "Plan de amarre" para detalle completo (directos, ángulos, puntos de anclaje).</p>
+    ${docFooter('Hoja 2/2 · operativa')}</div>`];
+  return pages;
+}
+
+function generateDestinationInstructionsDoc(){
+  const num=state._docNum||genDocNumber();
+  const truck=TRUCKS[state.truck];
+  const remonts=_remontsInfo();
+  const pages=[];
+  // Orden de descarga depende de loadingMethod. LIFO: primero destino 1, último N.
+  // Un destino por hoja.
+  for(let idx=0; idx<state.destinations.length; idx++){
+    const d=state.destinations[idx];
+    const items=_placedSortedForLoad().filter(p=>p.destination===d.name);
+    if(!items.length) continue;
+    const totalKg=items.reduce((s,p)=>s+p.weight,0);
+    const totalVol=items.reduce((s,p)=>s+(p.L*p.A*p.H)/1e6,0);
+    let xMin=Infinity,xMax=-Infinity;
+    items.forEach(p=>{xMin=Math.min(xMin,p.x); xMax=Math.max(xMax,p.x+p.L);});
+    const adr=_adrSummaryForItems(items);
+    const rows=items.map(p=>{
+      const obs=[];
+      if(p.fragile) obs.push('<b style="color:#b91c1c">FRÁGIL</b>');
+      if(p.noStackTop) obs.push('No apilar encima');
+      if(!p.stackable) obs.push('No remontable');
+      if(p.adr){const ai=ADR_CLASSES[p.adr]; obs.push(`<span style="background:${ai.color};color:#0a0a0a;padding:1px 6px;border-radius:3px;font-weight:700">ADR ${p.adr}</span>`);}
+      const top=remonts[p.id]?remonts[p.id].map(x=>`${x.ref} (${x.destination})`).join(', '):'—';
+      return `<tr>
+        <td style="padding:5px;border:1px solid #ddd;text-align:center;font-weight:700">${String(p.loadSeq).padStart(3,'0')}</td>
+        <td style="padding:5px;border:1px solid #ddd">${p.ref||'(sin ref)'}</td>
+        <td style="padding:5px;border:1px solid #ddd;text-align:right">${p.L}×${p.A}×${p.H}</td>
+        <td style="padding:5px;border:1px solid #ddd;text-align:right">${Math.round(p.weight).toLocaleString()}</td>
+        <td style="padding:5px;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:8.5pt">x ${Math.round(p.x)}·z ${Math.round(p.z)}</td>
+        <td style="padding:5px;border:1px solid #ddd;font-size:8.5pt">${obs.join(' · ')||'—'}</td>
+        <td style="padding:5px;border:1px solid #ddd;font-size:8.5pt">${top}</td>
+      </tr>`;
+    }).join('');
+    pages.push(`<div class="doc-sheet">${docHeader(`INSTRUCCIONES · ${d.name}`,`Almacén receptor · destino ${idx+1}/${state.destinations.length}`,num)}
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+        <div style="width:18px;height:18px;border-radius:5px;background:${d.color};border:1px solid #333"></div>
+        <div style="font-weight:700;font-size:12pt;color:#1a1a1a">${d.name}</div>
+        <div style="flex:1"></div>
+        <div style="font-size:9pt;color:#333;text-align:right">
+          <b>${items.length}</b> bultos · <b>${Math.round(totalKg).toLocaleString()}</b> kg · <b>${totalVol.toFixed(2)}</b> m³
+        </div>
+      </div>
+
+      <h3 style="font-size:10pt;margin:0 0 4px">1 · Localización en el vehículo</h3>
+      <p style="font-size:9pt;color:#333;margin-bottom:10px">Carga situada entre <b>x ${Math.round(xMin)} cm</b> y <b>x ${Math.round(xMax)} cm</b> desde el fondo del remolque. Longitud ocupada por este destino: <b>${Math.round(xMax-xMin)} cm</b>.</p>
+
+      ${adr.classes.length?`<h3 style="font-size:10pt;margin:10px 0 4px">2 · ADR</h3>
+        <div style="margin-bottom:6px">${adr.html}</div>
+        <ul style="font-size:9pt;color:#333;line-height:1.5;padding-left:18px;margin-bottom:10px">
+          <li>Verificar integridad de etiquetas y envases antes de descargar.</li>
+          <li>Descargar en zona ADR dedicada, separada de incompatibles.</li>
+          <li>Firmar carta de porte ADR · registrar tipo y cantidad.</li>
+        </ul>`:''}
+
+      <h3 style="font-size:10pt;margin:10px 0 4px">${adr.classes.length?'3':'2'} · Descarga</h3>
+      <p style="font-size:8.5pt;color:#666;margin-bottom:6px">Descargar en orden <b>descendente</b> de secuencia (el último bulto cargado sale primero, por eso bultos con # alto están más cerca de la puerta trasera).</p>
+      <table style="width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:10px">
+        <thead><tr style="background:#f4f4f5">
+          <th style="padding:5px;border:1px solid #ddd">#</th>
+          <th style="padding:5px;border:1px solid #ddd;text-align:left">Ref</th>
+          <th style="padding:5px;border:1px solid #ddd;text-align:right">L×A×H</th>
+          <th style="padding:5px;border:1px solid #ddd;text-align:right">kg</th>
+          <th style="padding:5px;border:1px solid #ddd;text-align:right">Pos</th>
+          <th style="padding:5px;border:1px solid #ddd;text-align:left">Obs.</th>
+          <th style="padding:5px;border:1px solid #ddd;text-align:left">Bultos encima</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <h3 style="font-size:10pt;margin:10px 0 4px">${adr.classes.length?'4':'3'} · Manipulación</h3>
+      <ul style="font-size:9pt;color:#333;line-height:1.5;padding-left:18px;margin-bottom:10px">
+        <li>Comprobar amarres antes de abrir la puerta trasera — riesgo de caída.</li>
+        <li>Retirar con carretilla elevadora respetando capacidad de forks y altura de pinchado.</li>
+        <li>Si hay bultos <b>NO apilar encima</b>, marcarlos con adhesivo rojo en el área de recepción hasta su ubicación final.</li>
+        <li>Devolver palets EUR intercambiables al conductor si procede (vale de cambio).</li>
+      </ul>
+
+      <h3 style="font-size:10pt;margin:10px 0 4px">${adr.classes.length?'5':'4'} · Recepción</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:9pt">
+        <tr>
+          <td style="padding:6px;border:1px solid #ddd;width:50%">Bultos contados: ______ / ${items.length}</td>
+          <td style="padding:6px;border:1px solid #ddd;width:50%">Peso confirmado: ______ kg / ${Math.round(totalKg).toLocaleString()} kg</td>
+        </tr>
+        <tr>
+          <td style="padding:6px;border:1px solid #ddd">Incidencias: ______________________________</td>
+          <td style="padding:6px;border:1px solid #ddd">Hora descarga: ______</td>
+        </tr>
+        <tr>
+          <td style="padding:22px 6px 6px;border:1px solid #ddd;border-top:none">Firma conductor</td>
+          <td style="padding:22px 6px 6px;border:1px solid #ddd;border-top:none">Firma almacén receptor</td>
+        </tr>
+      </table>
+      ${docFooter(`Destino ${idx+1}/${state.destinations.length} · ${d.name}`)}</div>`);
+  }
+  if(!pages.length){
+    pages.push(`<div class="doc-sheet">${docHeader('INSTRUCCIONES DE DESTINO','— sin destinos con bultos —',num)}<p style="font-size:10pt;color:#666;text-align:center;margin-top:60px">No hay bultos colocados para ningún destino todavía. Optimiza primero.</p>${docFooter('')}</div>`);
+  }
+  return pages;
+}
+
 function generateFullDossier(){
   state._docNum=genDocNumber();
-  return [...generatePlanoDoc(),...generateCtuDoc(),...generateSimpleCertDoc(),...generateLashingDoc(),...generatePackingListDoc()];
+  return [
+    ...generatePlanoDoc(),
+    ...generateCtuDoc(),
+    ...generateSimpleCertDoc(),
+    ...generateOriginInstructionsDoc(),
+    ...generateDestinationInstructionsDoc(),
+    ...generateLashingDoc(),
+    ...generatePackingListDoc()
+  ];
 }
 
 function showDoc(pages,title){
@@ -4149,6 +4402,9 @@ function init(){
   $('btnDocCtu').addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateCtuDoc(),'Certificado CTU');});
   $('btnDocSimple').addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateSimpleCertDoc(),'Albarán de arrumazón');});
   $('btnDocPacking').addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generatePackingListDoc(),'Packing list final');});
+  { const el=$('btnDocLash'); if(el) el.addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateLashingDoc(),'Plan de amarre / trinca');}); }
+  { const el=$('btnDocOrigin'); if(el) el.addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateOriginInstructionsDoc(),'Instrucciones almacén consolidador');}); }
+  { const el=$('btnDocDest'); if(el) el.addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateDestinationInstructionsDoc(),'Instrucciones almacenes receptores');}); }
   $('btnDocAll').addEventListener('click',()=>{state._docNum=genDocNumber(); showDoc(generateFullDossier(),'Dossier completo');});
   $('btnDocClose').addEventListener('click',()=>$('docModal').classList.remove('open'));
   $('btnDocPrint').addEventListener('click',()=>window.print());
