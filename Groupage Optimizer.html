@@ -1293,8 +1293,7 @@ select{cursor:pointer}
 }
 .panel-backdrop{
   position:fixed; inset:0;
-  background:rgba(0,0,0,0.5);
-  backdrop-filter:blur(3px);
+  background:rgba(0,0,0,0.55);
   z-index:80;
   opacity:0; pointer-events:none;
   transition:opacity .2s;
@@ -1325,7 +1324,8 @@ select{cursor:pointer}
   .left-panel, .right-panel{
     position:fixed; top:0; bottom:0;
     width:min(360px, 88vw);
-    z-index:90;
+    z-index:100;
+    isolation:isolate;
     transform:translateX(-105%);
     transition:transform .28s cubic-bezier(.4,0,.2,1);
     box-shadow:0 18px 60px rgba(0,0,0,0.5);
