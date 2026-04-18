@@ -36,7 +36,17 @@ h1 .accent{background:linear-gradient(90deg,var(--cyan),var(--amber));-webkit-ba
 .card:hover .cta::after{transform:translateX(4px)}
 .tracker{--tint:var(--cyan)}
 .groupage{--tint:var(--amber)}
-footer{text-align:center;margin-top:40px;font-size:12px;color:var(--dim)}
+.install{margin-top:40px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;color:var(--text)}
+.install h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.install > p{color:var(--dim);font-size:13px;margin-bottom:14px}
+.install-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:12px}
+.install-step{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.5}
+.install-step b{display:block;color:var(--cyan);font-weight:600;font-size:12px;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase}
+.install-step span{color:var(--dim)}
+.install-step em{font-style:normal;color:var(--amber);font-weight:600}
+.install-step i{font-style:normal;color:var(--text);font-weight:500}
+.install-note{font-size:11px;color:var(--dim);margin-top:6px}
+footer{text-align:center;margin-top:30px;font-size:12px;color:var(--dim)}
 footer a{color:var(--dim);text-decoration:none;border-bottom:1px dotted var(--line)}
 footer a:hover{color:var(--text)}
 </style>
@@ -70,6 +80,26 @@ footer a:hover{color:var(--text)}
       <span class="cta">Abrir optimizador</span>
     </a>
   </div>
+
+  <section class="install">
+    <h3>Instalar como app</h3>
+    <p>Cualquiera de las dos herramientas funciona como aplicación instalable (PWA). Trabaja sin conexión, aparece en el launcher y ocupa &lt; 1 MB.</p>
+    <div class="install-grid">
+      <div class="install-step">
+        <b>iPhone / iPad</b>
+        <span>Abre la app en Safari → Compartir <em>↑</em> → <i>Añadir a pantalla de inicio</i></span>
+      </div>
+      <div class="install-step">
+        <b>Android</b>
+        <span>Chrome → menú <em>⋮</em> → <i>Instalar app</i> (o el banner que salta automáticamente)</span>
+      </div>
+      <div class="install-step">
+        <b>Windows / macOS / Linux</b>
+        <span>Chrome o Edge → icono <em>⊞</em> a la derecha de la URL, o menú → <i>Instalar esta app</i></span>
+      </div>
+    </div>
+    <p class="install-note">Cada app se instala por separado: abre la que quieras instalar primero, pulsa el icono de descarga en su cabecera, y repite para la otra.</p>
+  </section>
 
   <footer>
     Código en <a href="https://github.com/luisfdezp-svg/vessel-tracker" target="_blank" rel="noopener">GitHub</a>

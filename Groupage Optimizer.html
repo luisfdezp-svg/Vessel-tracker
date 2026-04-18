@@ -2,8 +2,17 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Groupage · Optimizador de carga</title>
+<link rel="manifest" href="./manifest-groupage.json">
+<link rel="icon" type="image/svg+xml" href="./icon-groupage.svg">
+<link rel="apple-touch-icon" href="./icon-groupage.svg">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Groupage">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Optimizador 3D de carga consolidada con ADR, CdG, amarre EN 12195-1 y documentación lista para imprimir.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -1618,6 +1627,9 @@ select{cursor:pointer}
       <span class="pulse"></span>
       <span id="statusText">Sistema listo</span>
     </div>
+    <button class="icon-btn" id="btnInstall" title="Instalar app" style="display:none">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+    </button>
     <button class="icon-btn" id="btnTheme" title="Cambiar tema">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9c-4.97 0-9-4.03-9-9z"/></svg>
     </button>
@@ -4850,6 +4862,33 @@ function init(){
 
   // click outside modal closes
   $('helpModal').addEventListener('click',e=>{if(e.target===$('helpModal')) $('helpModal').classList.remove('open');});
+
+  // ===== PWA: service worker + install prompt =====
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});
+  }
+  let _installEvt=null;
+  const instBtn=$('btnInstall');
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault(); _installEvt=e;
+    if(instBtn) instBtn.style.display='';
+  });
+  if(instBtn) instBtn.addEventListener('click',async()=>{
+    if(!_installEvt){
+      // iOS y fallback: muestra instrucciones
+      alert('Para instalar:\\n\\niPhone/iPad — pulsa Compartir (↑) y "Añadir a pantalla de inicio".\\nAndroid/Chrome — menú ⋮ y "Instalar app".\\nPC (Chrome/Edge) — icono de instalación en la barra de direcciones.');
+      return;
+    }
+    _installEvt.prompt();
+    await _installEvt.userChoice;
+    _installEvt=null;
+    if(instBtn) instBtn.style.display='none';
+  });
+  window.addEventListener('appinstalled',()=>{_installEvt=null; if(instBtn) instBtn.style.display='none';});
+  // Mostrar el boton tambien en iOS (beforeinstallprompt no dispara) si no esta ya instalada
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if(isIOS && !standalone && instBtn) instBtn.style.display='';
 }
 
 document.addEventListener('DOMContentLoaded', init);

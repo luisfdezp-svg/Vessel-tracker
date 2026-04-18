@@ -1,14 +1,20 @@
-const CACHE = 'vt6-v11';
+const CACHE = 'vt6-v12';
 const SHELL = [
   './',
   './index.html',
   './vessel-tracker.html',
   './Groupage Optimizer.html',
   './manifest.json',
+  './manifest-groupage.json',
   './icon.svg',
+  './icon-groupage.svg',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
-  'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js'
+  'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
 self.addEventListener('install', e => {
