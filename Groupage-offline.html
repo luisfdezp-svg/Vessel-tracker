@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!--
   Groupage Optimizer — standalone offline build
-  Generated 2026-04-18T15:21:37.089Z
+  Generated 2026-04-18T16:19:00.345Z
   Three.js r128, SheetJS xlsx 0.18.5, jsPDF 2.5.1, html2canvas 1.4.1
-  Sin red: las tipografias caen a system fonts.
+  Sin red: las tipografias caen a system fonts. Ver banner de error en pantalla si algo falla.
 -->
 
 <html lang="es">
@@ -5097,25 +5097,43 @@ function initTweaks(){
 // INIT
 // ============================================================
 function init(){
-  renderDestinations();
-  renderManualDestSelect();
-  initThree();
-  initTweaks();
-  updateKPIs();
-  updateStepper();
-
-  // ===== Mobile drawers =====
+  // ===== Mobile drawers (CABLEADOS PRIMERO para que siempre funcionen
+  // aunque otra parte de init falle — p.ej. WebGL no disponible) =====
   const backdrop=$('panelBackdrop'); const leftP=$('leftPanel'); const rightP=$('rightPanel');
-  const openLeft=()=>{leftP.classList.add('open'); rightP.classList.remove('open'); backdrop.classList.add('open');};
-  const openRight=()=>{rightP.classList.add('open'); leftP.classList.remove('open'); backdrop.classList.add('open');};
-  const closeAll=()=>{leftP.classList.remove('open'); rightP.classList.remove('open'); backdrop.classList.remove('open');};
-  $('fabOpenLeft').addEventListener('click',openLeft);
-  $('fabOpenRight').addEventListener('click',openRight);
-  backdrop.addEventListener('click',closeAll);
+  const openLeft=()=>{if(leftP){leftP.classList.add('open');} if(rightP)rightP.classList.remove('open'); if(backdrop)backdrop.classList.add('open');};
+  const openRight=()=>{if(rightP){rightP.classList.add('open');} if(leftP)leftP.classList.remove('open'); if(backdrop)backdrop.classList.add('open');};
+  const closeAll=()=>{if(leftP)leftP.classList.remove('open'); if(rightP)rightP.classList.remove('open'); if(backdrop)backdrop.classList.remove('open');};
+  { const el=$('fabOpenLeft'); if(el) el.addEventListener('click',openLeft); }
+  { const el=$('fabOpenRight'); if(el) el.addEventListener('click',openRight); }
+  if(backdrop) backdrop.addEventListener('click',closeAll);
   document.querySelectorAll('.panel-close-btn').forEach(b=>b.addEventListener('click',closeAll));
   window.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
-  // close drawers when picking Optimize on narrow screens (so user sees the viewer)
   const closeIfNarrow=()=>{if(window.innerWidth<=1100) closeAll();};
+  window.closeIfNarrow=closeIfNarrow;
+
+  // Handler global de errores: muestra toast visible (util sin devtools)
+  const showErr=(msg)=>{
+    let bar=document.getElementById('__errBar');
+    if(!bar){
+      bar=document.createElement('div'); bar.id='__errBar';
+      bar.style.cssText='position:fixed;left:10px;right:10px;bottom:env(safe-area-inset-bottom,10px);max-height:40vh;overflow:auto;background:#7f1d1d;color:#fff;padding:10px 14px;border-radius:8px;font:12px/1.4 -apple-system,system-ui,sans-serif;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
+      bar.innerHTML='<b>⚠ Error</b><button style="float:right;background:transparent;border:0;color:#fff;font-size:18px;cursor:pointer" onclick="this.parentNode.remove()">×</button><div id="__errBody" style="margin-top:4px;font-family:monospace;font-size:11px;white-space:pre-wrap;word-break:break-word"></div>';
+      document.body.appendChild(bar);
+    }
+    const body=document.getElementById('__errBody');
+    body.textContent=(body.textContent?body.textContent+'\n':'')+msg;
+  };
+  window.addEventListener('error', ev=>{showErr(ev.message+(ev.filename?' @ '+ev.filename.split('/').pop()+':'+ev.lineno:''));});
+  window.addEventListener('unhandledrejection', ev=>{showErr('Promise: '+(ev.reason&&ev.reason.message||ev.reason||''));});
+
+  // Inits pesados — si fallan, el resto de la UI ya es interactivo
+  const safe=(fn,name)=>{try{fn();}catch(e){console.error(name+' failed:',e); showErr(name+': '+e.message);}};
+  safe(renderDestinations,'renderDestinations');
+  safe(renderManualDestSelect,'renderManualDestSelect');
+  safe(initThree,'initThree');
+  safe(initTweaks,'initTweaks');
+  safe(updateKPIs,'updateKPIs');
+  safe(updateStepper,'updateStepper');
 
   // truck cards
   document.querySelectorAll('.truck-card').forEach(card=>{
