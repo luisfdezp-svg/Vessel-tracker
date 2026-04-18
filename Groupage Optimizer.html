@@ -1552,6 +1552,37 @@ select{cursor:pointer}
   .id-grid{grid-template-columns:1fr 1fr}
 }
 
+/* Short viewports (landscape phone / split-view): gana real estate para el visor 3D */
+@media(max-height:520px){
+  .topbar{padding:4px 12px; min-height:38px; gap:10px}
+  .brand{gap:8px}
+  .brand-mark{width:30px; height:30px}
+  .brand-mark svg{width:18px; height:18px}
+  .brand-name{font-size:13px}
+  .brand-sub{display:none}
+  .topbar-actions .tb-btn{width:34px; height:34px}
+  .hud-hint{display:none}
+  .viewer-overlay.top-left{top:6px; left:8px}
+  .viewer-overlay.top-right{top:6px; right:8px}
+  .hud-row{font-size:9px; margin:0}
+  .scale-block{padding:5px 8px; min-width:0}
+  .scale-label{margin-bottom:2px; font-size:8px}
+  .scale-val{font-size:9.5px; padding:0; gap:8px}
+  .viewer-legend{bottom:8px; left:8px; padding:5px 8px}
+  .viewer-legend .lg-title{margin-bottom:2px; font-size:8px}
+  .viewer-legend .lg-item{font-size:10px; margin-bottom:1px}
+  /* Controles del visor: solo iconos en una barra mini arriba-centro */
+  .viewer-controls{
+    top:6px !important; bottom:auto !important;
+    padding:3px; gap:2px;
+    background:color-mix(in srgb, var(--bg-1) 70%, transparent);
+  }
+  .viewer-controls .vc-btn{padding:5px 6px}
+  /* Ocultar botones con texto (Encuadrar/Despiece/Transp) — gestures + shortcuts ya cubren */
+  #vcFit, #vcExplode, #vcTransp{display:none}
+  .vc-group + .vc-group{display:none}
+}
+
 /* Sidebars angostos (drawer en movil, 360 px): que las 3 casillas L/A/H respiren */
 .left-panel .form-grid-3{gap:6px}
 .left-panel .form-grid-3 input{padding:8px}
