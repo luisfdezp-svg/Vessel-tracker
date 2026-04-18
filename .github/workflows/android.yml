@@ -47,9 +47,12 @@ jobs:
           packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
       - name: Install Gradle 8.7
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.7'
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -sSL -o gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q gradle.zip
+          echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
 
       - name: Build release APK
         env:
