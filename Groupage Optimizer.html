@@ -817,6 +817,94 @@ select{cursor:pointer}
 .rec-detail{font-size:10px; color:var(--ink-dim); margin-top:2px; font-family:'JetBrains Mono',monospace}
 
 /* ================================================================
+   ITEM DETAIL (flotante sobre visor)
+   ================================================================ */
+.item-detail{
+  position:fixed; top:80px; right:400px;
+  width:320px; max-height:75vh; overflow-y:auto;
+  background:color-mix(in srgb, var(--bg-1) 96%, transparent);
+  backdrop-filter:blur(14px);
+  border:1px solid var(--line); border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  z-index:60; padding:14px;
+  font-family:'Space Grotesk',sans-serif;
+}
+@media(max-width:1500px){.item-detail{right:340px}}
+@media(max-width:1100px){
+  .item-detail{right:12px; left:12px; width:auto; top:auto; bottom:84px; max-height:55vh; z-index:95}
+}
+.id-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px}
+.id-dest{display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink)}
+.id-color{width:14px; height:14px; border-radius:4px; border:1px solid var(--line)}
+.id-close{
+  width:28px; height:28px; border-radius:50%;
+  background:var(--bg-2); border:1px solid var(--line);
+  color:var(--ink-dim); font-size:18px; line-height:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.id-close:hover{color:var(--ac-red); border-color:var(--ac-red)}
+.id-ref{font-size:14px; font-weight:700; margin:0 0 10px 0; color:var(--ink)}
+.id-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px}
+.id-cell{background:var(--bg-2); border:1px solid var(--line); border-radius:8px; padding:7px 9px}
+.id-label{font-size:9px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.08em; font-weight:600; margin-bottom:3px}
+.id-val{font-size:12px; font-weight:600; color:var(--ink); font-family:'JetBrains Mono',monospace; word-break:break-word}
+.id-section{border-top:1px solid var(--line); padding-top:10px; margin-top:8px}
+.id-chips{display:flex; flex-wrap:wrap; gap:5px; margin-top:5px}
+.id-chip{font-size:10px; padding:3px 8px; border-radius:999px; background:var(--bg-2); color:var(--ink); border:1px solid var(--line); font-weight:600}
+.id-chip.ok{color:var(--ac-green); border-color:var(--ac-green)}
+.id-chip.warn{color:var(--ac-amber); border-color:var(--ac-amber)}
+.id-chip.bad{color:var(--ac-red); border-color:var(--ac-red)}
+.id-actions{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap}
+.id-btn{
+  flex:1; min-width:0; padding:7px 10px;
+  background:var(--bg-2); border:1px solid var(--line); border-radius:8px;
+  font-family:inherit; font-size:11px; font-weight:600; color:var(--ink); cursor:pointer;
+}
+.id-btn:hover{border-color:var(--accent); color:var(--accent)}
+.id-adr{display:flex; align-items:center; gap:10px; margin-top:5px; padding:8px; border-radius:8px; background:var(--bg-2); border:1px solid var(--line)}
+.id-adr-dia{
+  width:38px; height:38px; flex-shrink:0; display:grid; place-items:center;
+  color:#0a0a0a; font-weight:800; font-family:'JetBrains Mono',monospace; font-size:15px;
+  transform:rotate(45deg); border:2px solid #0a0a0a;
+}
+.id-adr-txt{flex:1; font-size:12px; font-weight:600}
+.id-adr-txt small{display:block; color:var(--ink-dim); font-size:10px; font-weight:500}
+.id-compl{margin-top:6px; font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--ink-dim); line-height:1.5}
+.id-compl .ok{color:var(--ac-green)}
+.id-compl .bad{color:var(--ac-red)}
+
+/* ================================================================
+   ADR MATRIX MODAL
+   ================================================================ */
+.adr-modal{max-width:720px !important}
+.adr-legend{display:flex; flex-wrap:wrap; gap:14px; font-size:11px; color:var(--ink-dim); margin:6px 0 10px; font-family:'JetBrains Mono',monospace}
+.adr-legend i{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:middle}
+.adr-leg-box.ok{background:#10b981}
+.adr-leg-box.warn{background:#fbbf24}
+.adr-leg-box.bad{background:#ef4444}
+.adr-matrix-wrap{overflow-x:auto; background:var(--bg-2); border:1px solid var(--line); border-radius:10px; padding:10px}
+.adr-matrix{display:grid; grid-template-columns:repeat(10, minmax(34px, 1fr)); gap:3px; min-width:380px}
+.adr-matrix div{display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; padding:6px 3px; border-radius:4px; aspect-ratio:1/1}
+.adr-matrix .adr-hdr{background:var(--bg-3); color:var(--ink)}
+.adr-matrix .adr-corner{background:transparent; color:var(--ink-dim); font-size:9px}
+.adr-matrix .adr-cell.ok{background:rgba(16,185,129,0.18); color:#10b981}
+.adr-matrix .adr-cell.warn{background:rgba(251,191,36,0.22); color:#d97706}
+.adr-matrix .adr-cell.bad{background:rgba(239,68,68,0.22); color:#ef4444}
+.adr-matrix .adr-cell.self{background:var(--bg-3); color:var(--ink-dim)}
+.adr-classes{display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:8px}
+.adr-class-card{display:flex; gap:10px; padding:9px 11px; border-radius:9px; background:var(--bg-2); border:1px solid var(--line); align-items:center}
+.adr-class-dia{
+  width:32px; height:32px; flex-shrink:0; display:grid; place-items:center;
+  color:#0a0a0a; font-weight:800; font-family:'JetBrains Mono',monospace; font-size:14px;
+  transform:rotate(45deg); border:2px solid #0a0a0a;
+}
+.adr-class-txt{flex:1; font-size:12px}
+.adr-class-txt b{display:block; color:var(--ink); font-weight:700}
+.adr-class-txt small{color:var(--ink-dim); font-size:10px}
+
+.btn-ghost.btn-small{padding:6px 10px; font-size:11px}
+
+/* ================================================================
    SEQUENCE TABLE
    ================================================================ */
 .seq-wrap{
@@ -1359,6 +1447,15 @@ select{cursor:pointer}
   .fab-toggles{display:flex}
   .topbar-stepper{display:none}
   .topbar-status .status-pill{display:none}
+  /* Evita solape con FABs */
+  .viewer-controls{
+    bottom:auto; top:calc(env(safe-area-inset-top,0px) + 56px);
+    left:50%; transform:translateX(-50%);
+    flex-wrap:wrap; justify-content:center;
+    max-width:calc(100vw - 32px);
+  }
+  .vc-btn{padding:6px 8px; font-size:10px}
+  .vc-btn[id]{min-width:0}
 }
 
 @media(max-width:520px){
@@ -1544,6 +1641,7 @@ select{cursor:pointer}
             </select>
           </label>
         </div>
+        <button class="btn-ghost btn-small" type="button" id="btnShowAdr" style="margin-bottom:6px">📋 Ver matriz ADR</button>
         <div class="checkrow">
           <label class="check"><input type="checkbox" id="mStack" checked><span>Remontable</span></label>
           <label class="check"><input type="checkbox" id="mFrag"><span>Frágil</span></label>
@@ -1743,6 +1841,15 @@ select{cursor:pointer}
       </div>
     </section>
 
+    <section class="axle-section" id="adrInvSection" style="display:none">
+      <header class="section-head">
+        <div class="section-num" style="background:#ef4444">!</div>
+        <h2 class="section-title">Inventario ADR</h2>
+        <span class="hint"><button type="button" class="btn-ghost btn-small" id="btnShowAdr2">Ver matriz</button></span>
+      </header>
+      <div id="adrInvList" class="rec-grid"></div>
+    </section>
+
     <section class="seq-section">
       <header class="section-head">
         <div class="section-num">07</div>
@@ -1810,6 +1917,51 @@ select{cursor:pointer}
     <div class="progress-viz">
       <div class="viz-dot"></div><div class="viz-dot"></div><div class="viz-dot"></div>
     </div>
+  </div>
+</div>
+
+<!-- ============ ITEM DETAIL PANEL (flota sobre visor) ============ -->
+<div class="item-detail" id="itemDetail" style="display:none">
+  <div class="id-head">
+    <div class="id-dest"><span class="id-color" id="idColor"></span><span id="idDest">—</span></div>
+    <button class="id-close" id="idClose" type="button">×</button>
+  </div>
+  <div class="id-ref" id="idRef">—</div>
+  <div class="id-grid">
+    <div class="id-cell"><div class="id-label">Secuencia</div><div class="id-val" id="idSeq">—</div></div>
+    <div class="id-cell"><div class="id-label">Tipo</div><div class="id-val" id="idType">—</div></div>
+    <div class="id-cell"><div class="id-label">Dimensiones</div><div class="id-val" id="idDim">—</div></div>
+    <div class="id-cell"><div class="id-label">Peso</div><div class="id-val" id="idKg">—</div></div>
+    <div class="id-cell"><div class="id-label">Posición</div><div class="id-val" id="idPos">—</div></div>
+    <div class="id-cell"><div class="id-label">Apoyo</div><div class="id-val" id="idSup">—</div></div>
+  </div>
+  <div class="id-section">
+    <div class="id-label">Apilado</div>
+    <div class="id-chips" id="idStackChips"></div>
+    <div class="id-actions" id="idStackActions"></div>
+  </div>
+  <div class="id-section" id="idAdrSection" style="display:none">
+    <div class="id-label">ADR</div>
+    <div class="id-adr" id="idAdr"></div>
+    <div class="id-compl" id="idCompl"></div>
+  </div>
+</div>
+
+<!-- ============ ADR MATRIX MODAL ============ -->
+<div class="modal-mask" id="adrModal">
+  <div class="modal adr-modal">
+    <button class="modal-close" data-close-modal="adrModal">×</button>
+    <h2>Matriz ADR · segregación simplificada</h2>
+    <p class="modal-lead">Clases incompatibles en el mismo compartimento (derivado de ADR 2023 capítulos 3.2/7.5). Los casilleros rojos exigen separación física o vehículos distintos. Los naranjas recomiendan separador según cantidad.</p>
+    <div class="adr-legend">
+      <span><i class="adr-leg-box ok"></i> Compatible</span>
+      <span><i class="adr-leg-box warn"></i> Con separación</span>
+      <span><i class="adr-leg-box bad"></i> Incompatible</span>
+    </div>
+    <div class="adr-matrix-wrap"><div id="adrMatrix" class="adr-matrix"></div></div>
+    <h3 style="margin-top:20px">Clases</h3>
+    <div class="adr-classes" id="adrClassList"></div>
+    <p class="modal-foot">Esta matriz es una guía operativa. Verifica siempre la carta de porte ADR y la normativa de los países atravesados.</p>
   </div>
 </div>
 
@@ -2405,8 +2557,15 @@ function initThree(){
   const grid=new THREE.GridHelper(40,80,0x3a3a3a,0x252525);
   grid.position.y=-0.01; scene.add(grid);
 
-  canvas.addEventListener('mousedown',e=>{isDragging=true; lastMouse={x:e.clientX,y:e.clientY};});
-  window.addEventListener('mouseup',()=>{isDragging=false});
+  let pressPos=null, pressTime=0;
+  canvas.addEventListener('mousedown',e=>{isDragging=true; lastMouse={x:e.clientX,y:e.clientY}; pressPos={x:e.clientX,y:e.clientY}; pressTime=Date.now();});
+  window.addEventListener('mouseup',e=>{
+    if(pressPos){
+      const mv=Math.hypot(e.clientX-pressPos.x, e.clientY-pressPos.y);
+      if(mv<5 && Date.now()-pressTime<400) handleCanvasTap(e.clientX, e.clientY);
+    }
+    pressPos=null; isDragging=false;
+  });
   canvas.addEventListener('mousemove',e=>{
     if(!isDragging) return;
     const dx=e.clientX-lastMouse.x, dy=e.clientY-lastMouse.y;
@@ -2415,6 +2574,30 @@ function initThree(){
     lastMouse={x:e.clientX,y:e.clientY};
   });
   canvas.addEventListener('wheel',e=>{e.preventDefault(); controls.targetZoom*=(1-e.deltaY*0.001); controls.targetZoom=Math.max(0.2,Math.min(5,controls.targetZoom));});
+  // Touch: drag + tap
+  let tPressPos=null, tPressTime=0, tActive=false, lastTouch=null;
+  canvas.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1) return;
+    const t=e.touches[0]; tActive=true; lastTouch={x:t.clientX,y:t.clientY};
+    tPressPos={x:t.clientX,y:t.clientY}; tPressTime=Date.now();
+  },{passive:true});
+  canvas.addEventListener('touchmove',e=>{
+    if(!tActive||e.touches.length!==1) return;
+    const t=e.touches[0];
+    const dx=t.clientX-lastTouch.x, dy=t.clientY-lastTouch.y;
+    controls.targetX+=dx*0.5; controls.targetY+=dy*0.5; controls.targetY=Math.max(-89,Math.min(89,controls.targetY));
+    lastTouch={x:t.clientX,y:t.clientY};
+  },{passive:true});
+  canvas.addEventListener('touchend',e=>{
+    if(tPressPos){
+      const ct=(e.changedTouches&&e.changedTouches[0])||null;
+      if(ct){
+        const mv=Math.hypot(ct.clientX-tPressPos.x, ct.clientY-tPressPos.y);
+        if(mv<8 && Date.now()-tPressTime<400) handleCanvasTap(ct.clientX, ct.clientY);
+      }
+    }
+    tActive=false; tPressPos=null;
+  });
   window.addEventListener('resize',()=>{const r=canvas.parentElement.getBoundingClientRect(); renderer.setSize(r.width,r.height); camera.aspect=r.width/r.height; camera.updateProjectionMatrix();});
 
   buildTruckMesh();
@@ -2488,25 +2671,36 @@ function buildItemMeshes(placed){
     const explOff = state.exploded?i*0.04:0;
     mesh.position.set(it.x/100+dx/2, it.y/100+dy/2+explOff, it.z/100-A/2+dz/2);
     const isSel = state.selectedItem && state.selectedItem.id===it.id;
-    const edgeCol = isSel?0xffffff:(state.boxStyle==='wire'?0xffffff:0x000000);
-    const edgeOp = isSel?1:(state.boxStyle==='wire'?0.8:0.45);
-    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:edgeCol,transparent:true,opacity:edgeOp})));
+    // Bordes: seleccionado blanco; ADR color de clase; noStackTop rojo; resto por defecto
+    let edgeCol=isSel?0xffffff:(state.boxStyle==='wire'?0xffffff:0x0a0a0a);
+    let edgeOp =isSel?1:(state.boxStyle==='wire'?0.85:0.5);
+    let edgeW=1;
+    if(it.noStackTop){edgeCol=0xff4d5e; edgeOp=0.95; edgeW=2;}
+    else if(it.adr && ADR_CLASSES[it.adr]){edgeCol=new THREE.Color(ADR_CLASSES[it.adr].color).getHex(); edgeOp=0.9; edgeW=2;}
+    const edgesLine=new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({color:edgeCol,transparent:true,opacity:edgeOp,linewidth:edgeW}));
+    mesh.add(edgesLine);
+    if(isSel){
+      // Halo amarillo bajo el bulto para resaltar en móvil donde linewidth no aplica
+      const halo=new THREE.Mesh(new THREE.PlaneGeometry(dx+0.25,dz+0.25), new THREE.MeshBasicMaterial({color:0xfbbf24,transparent:true,opacity:0.35,side:THREE.DoubleSide}));
+      halo.rotation.x=-Math.PI/2; halo.position.set(0,-dy/2+0.005,0); mesh.add(halo);
+    }
     if(it.fragile){
-      const warn=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8), new THREE.MeshBasicMaterial({color:0xff4d5e}));
-      warn.position.set(0,dy/2+0.06,0); mesh.add(warn);
+      const warn=new THREE.Mesh(new THREE.SphereGeometry(0.09,12,12), new THREE.MeshBasicMaterial({color:0xff4d5e}));
+      warn.position.set(0,dy/2+0.08,0); mesh.add(warn);
     }
     if(it.adr && ADR_CLASSES[it.adr]){
+      // Rombo ADR grande sobre el bulto
       const chip=makeAdrLabel(it.adr);
-      chip.position.set(0,dy/2+0.22,0); mesh.add(chip);
+      chip.position.set(0,dy/2+0.35,0); mesh.add(chip);
     }
     if(it.noStackTop){
-      // marcador sutil: halo rojo encima
-      const cap=new THREE.Mesh(new THREE.RingGeometry(0.06,0.09,16), new THREE.MeshBasicMaterial({color:0xff4d5e,side:THREE.DoubleSide,transparent:true,opacity:0.7}));
-      cap.rotation.x=-Math.PI/2; cap.position.set(0,dy/2+0.02,0); mesh.add(cap);
+      // Aspa roja grande sobre el techo
+      const x=makeNoStackMark();
+      x.position.set(0,dy/2+0.015,0); mesh.add(x);
     }
-    if(placed.length<=80){
+    if(placed.length<=120){
       const label=makeSmallLabel(`${it.loadSeq}`);
-      label.position.set(0,dy/2+0.12,0); mesh.add(label);
+      label.position.set(0,dy/2+(it.adr?0.62:0.18),0); mesh.add(label);
     }
     mesh.userData={item:it};
     scene.add(mesh); itemMeshes.push(mesh);
@@ -2516,19 +2710,43 @@ function buildItemMeshes(placed){
 
 function makeAdrLabel(cls){
   const info=ADR_CLASSES[cls]||{label:'ADR',color:'#ef4444'};
-  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const c=document.createElement('canvas'); c.width=256; c.height=256;
   const ctx=c.getContext('2d');
-  // Romboide ADR estandar
+  // Romboide ADR grande, bien contrastado
   ctx.save();
-  ctx.translate(32,32); ctx.rotate(Math.PI/4);
-  ctx.fillStyle=info.color; ctx.fillRect(-20,-20,40,40);
-  ctx.strokeStyle='#0a0a0a'; ctx.lineWidth=3; ctx.strokeRect(-20,-20,40,40);
+  ctx.translate(128,128); ctx.rotate(Math.PI/4);
+  ctx.fillStyle=info.color; ctx.fillRect(-92,-92,184,184);
+  ctx.strokeStyle='#0a0a0a'; ctx.lineWidth=12; ctx.strokeRect(-92,-92,184,184);
+  // Borde blanco interior
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=4; ctx.strokeRect(-80,-80,160,160);
   ctx.restore();
-  ctx.fillStyle='#0a0a0a'; ctx.font='bold 20px "JetBrains Mono",monospace';
-  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(cls,32,38);
+  // Numero grande
+  ctx.fillStyle='#0a0a0a'; ctx.font='bold 96px "JetBrains Mono",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(cls,128,150);
+  // Etiqueta "ADR"
+  ctx.font='bold 28px "Space Grotesk",sans-serif';
+  ctx.fillText('ADR',128,72);
   const tex=new THREE.CanvasTexture(c);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
-  sp.scale.set(0.22,0.22,1);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  sp.renderOrder=999;
+  sp.scale.set(0.55,0.55,1);
+  return sp;
+}
+
+function makeNoStackMark(){
+  const c=document.createElement('canvas'); c.width=128; c.height=128;
+  const ctx=c.getContext('2d');
+  // Circulo rojo con aspa
+  ctx.fillStyle='rgba(255,77,94,0.88)'; ctx.beginPath(); ctx.arc(64,64,52,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=10; ctx.stroke();
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=12; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(36,36); ctx.lineTo(92,92); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(92,36); ctx.lineTo(36,92); ctx.stroke();
+  const tex=new THREE.CanvasTexture(c);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  sp.renderOrder=998;
+  sp.scale.set(0.4,0.4,1);
   return sp;
 }
 
@@ -2547,41 +2765,73 @@ function buildCoGMarker(){
   const m=computeMetrics(state.placed,t);
   const L=t.L/100, H=t.H/100, A=t.A/100;
   cogGroup=new THREE.Group();
-  // Envolvente admisible en planta (plano Y = 0.015)
+  // Envolvente admisible: plano translucido relleno + borde
   const env=state.cogEnvelope;
   const envL=L*(env.xMax-env.xMin);
   const envA=A*2*env.zHalf;
-  const envMat=new THREE.LineBasicMaterial({color:0x10b981,transparent:true,opacity:0.55});
-  const envGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(envL,0.005,envA));
-  const envBox=new THREE.LineSegments(envGeo,envMat);
-  envBox.position.set(L*(env.xMin+env.xMax)/2, 0.02, 0);
-  cogGroup.add(envBox);
-  // Cruz en planta
+  const envCx=L*(env.xMin+env.xMax)/2;
+  const envPlane=new THREE.Mesh(new THREE.PlaneGeometry(envL, envA), new THREE.MeshBasicMaterial({color:0x10b981,transparent:true,opacity:0.18,side:THREE.DoubleSide,depthWrite:false}));
+  envPlane.rotation.x=-Math.PI/2; envPlane.position.set(envCx, 0.012, 0);
+  cogGroup.add(envPlane);
+  const envEdge=new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.PlaneGeometry(envL, envA)),
+    new THREE.LineBasicMaterial({color:0x10b981,transparent:true,opacity:0.9})
+  );
+  envEdge.rotation.x=-Math.PI/2; envEdge.position.set(envCx, 0.014, 0);
+  cogGroup.add(envEdge);
+  // Cruz en planta ancha
   const cogCol=m.cogOk?0x10b981:0xff4d5e;
   const cx=m.cogX/100, cz=m.cogZ/100, cy=m.cogY/100;
-  const crossMat=new THREE.LineBasicMaterial({color:cogCol,transparent:true,opacity:0.9});
-  const crossGeo1=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx-0.4,0.03,cz),new THREE.Vector3(cx+0.4,0.03,cz)]);
-  const crossGeo2=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx,0.03,cz-0.4),new THREE.Vector3(cx,0.03,cz+0.4)]);
+  const crossLen=Math.min(1.2, L*0.12);
+  const crossMat=new THREE.LineBasicMaterial({color:cogCol,transparent:true,opacity:0.95});
+  const crossGeo1=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx-crossLen,0.03,cz),new THREE.Vector3(cx+crossLen,0.03,cz)]);
+  const crossGeo2=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx,0.03,cz-crossLen),new THREE.Vector3(cx,0.03,cz+crossLen)]);
   cogGroup.add(new THREE.Line(crossGeo1,crossMat));
   cogGroup.add(new THREE.Line(crossGeo2,crossMat));
-  // Bola en el CoG real (altura)
-  const sphere=new THREE.Mesh(new THREE.SphereGeometry(0.1,12,12), new THREE.MeshBasicMaterial({color:cogCol}));
+  // Anillo en la base bajo el CoG para resaltar
+  const ring=new THREE.Mesh(new THREE.RingGeometry(0.18,0.24,32), new THREE.MeshBasicMaterial({color:cogCol,transparent:true,opacity:0.85,side:THREE.DoubleSide,depthWrite:false}));
+  ring.rotation.x=-Math.PI/2; ring.position.set(cx,0.022,cz); cogGroup.add(ring);
+  // Esfera en el CoG real (altura)
+  const sphere=new THREE.Mesh(new THREE.SphereGeometry(0.16,16,16), new THREE.MeshBasicMaterial({color:cogCol,transparent:true,opacity:0.95,depthTest:false}));
+  sphere.renderOrder=997;
   sphere.position.set(cx,cy,cz); cogGroup.add(sphere);
   // Vertical plomada
   const plumb=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx,0.03,cz),new THREE.Vector3(cx,cy,cz)]);
-  cogGroup.add(new THREE.Line(plumb, new THREE.LineBasicMaterial({color:cogCol,transparent:true,opacity:0.5})));
+  cogGroup.add(new THREE.Line(plumb, new THREE.LineBasicMaterial({color:cogCol,transparent:true,opacity:0.6})));
+  // Etiqueta "CdG"
+  const label=makeCoGLabel(m.cogOk);
+  label.position.set(cx,cy+0.35,cz); cogGroup.add(label);
   scene.add(cogGroup);
 }
 
-function makeSmallLabel(text){
-  const c=document.createElement('canvas'); c.width=64;c.height=64;
+function makeCoGLabel(ok){
+  const c=document.createElement('canvas'); c.width=160; c.height=80;
   const ctx=c.getContext('2d');
-  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.fillRect(8,18,48,28);
-  ctx.fillStyle='#0a0a0a'; ctx.font='bold 22px "Space Grotesk",sans-serif';
-  ctx.textAlign='center'; ctx.fillText(text,32,40);
+  ctx.fillStyle=ok?'rgba(16,185,129,0.95)':'rgba(255,77,94,0.95)';
+  ctx.fillRect(4,4,152,72);
+  ctx.strokeStyle='#ffffff'; ctx.lineWidth=3; ctx.strokeRect(4,4,152,72);
+  ctx.fillStyle='#0a0a0a'; ctx.font='bold 38px "Space Grotesk",sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('CdG',80,40);
   const tex=new THREE.CanvasTexture(c);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
-  sp.scale.set(0.28,0.28,1);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  sp.renderOrder=1000;
+  sp.scale.set(0.7,0.35,1);
+  return sp;
+}
+
+function makeSmallLabel(text){
+  const c=document.createElement('canvas'); c.width=128;c.height=64;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='rgba(255,255,255,0.95)';
+  const w=Math.max(40, 14*String(text).length+24);
+  ctx.fillRect((128-w)/2,14,w,36);
+  ctx.strokeStyle='#0a0a0a'; ctx.lineWidth=2; ctx.strokeRect((128-w)/2,14,w,36);
+  ctx.fillStyle='#0a0a0a'; ctx.font='bold 32px "Space Grotesk",sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,64,33);
+  const tex=new THREE.CanvasTexture(c);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  sp.renderOrder=996;
+  sp.scale.set(0.44,0.22,1);
   return sp;
 }
 
@@ -2589,6 +2839,139 @@ function destColorFor(name){
   const dn=(name||'').toUpperCase();
   const d=state.destinations.find(x=>x.name.toUpperCase()===dn);
   return d?d.color:'#666666';
+}
+
+// ===== Raycast selección =====
+const _raycaster=new THREE.Raycaster();
+const _ndc=new THREE.Vector2();
+function handleCanvasTap(clientX, clientY){
+  if(!itemMeshes.length) return;
+  const canvas=$('canvas'); const rect=canvas.getBoundingClientRect();
+  _ndc.x=((clientX-rect.left)/rect.width)*2-1;
+  _ndc.y=-((clientY-rect.top)/rect.height)*2+1;
+  _raycaster.setFromCamera(_ndc, camera);
+  const hits=_raycaster.intersectObjects(itemMeshes, false);
+  if(hits.length){
+    const it=hits[0].object.userData.item;
+    state.selectedItem=(state.selectedItem && state.selectedItem.id===it.id) ? null : it;
+    buildItemMeshes(state.placed); renderSequenceTable();
+    if(state.selectedItem) openItemDetails(state.selectedItem); else closeItemDetails();
+  } else {
+    state.selectedItem=null; buildItemMeshes(state.placed); renderSequenceTable(); closeItemDetails();
+  }
+}
+
+function selectItemById(id){
+  const it=state.placed.find(p=>p.id===id); if(!it) return;
+  state.selectedItem=it; buildItemMeshes(state.placed); renderSequenceTable(); openItemDetails(it);
+}
+
+// ===== Item detail panel =====
+function closeItemDetails(){ const el=$('itemDetail'); if(el) el.style.display='none'; }
+function openItemDetails(it){
+  const el=$('itemDetail'); if(!el) return;
+  el.style.display='block';
+  const col=destColorFor(it.destination);
+  $('idColor').style.background=col;
+  $('idDest').textContent=it.destination||'—';
+  $('idRef').textContent=it.ref||'(sin ref)';
+  const seq=it.loadSeq!=null?`#${String(it.loadSeq).padStart(3,'0')}`:'—';
+  $('idSeq').textContent=seq;
+  $('idType').textContent=it.type||'—';
+  $('idDim').textContent=`${it.L}×${it.A}×${it.H} cm${it.rotated?' (R)':''}`;
+  $('idKg').textContent=`${Math.round(it.weight).toLocaleString()} kg`;
+  $('idPos').textContent=`x ${Math.round(it.x)} · y ${Math.round(it.y)} · z ${Math.round(it.z)} cm`;
+  const sup=(it.supporters&&it.supporters.length)?`${it.supporters.length} apoyo${it.supporters.length>1?'s':''}`:(it.y<1?'suelo':'—');
+  $('idSup').textContent=sup;
+  // Stack chips + actions
+  const chips=$('idStackChips');
+  const cc=[];
+  cc.push(it.stackable?'<span class="id-chip ok">Remontable</span>':'<span class="id-chip bad">No remontable</span>');
+  if(it.fragile) cc.push('<span class="id-chip warn">Frágil</span>');
+  if(it.noStackTop) cc.push('<span class="id-chip bad">No apilar encima</span>');
+  if(it.maxTop>0) cc.push(`<span class="id-chip">máx. encima ${it.maxTop} kg</span>`);
+  chips.innerHTML=cc.join('');
+  const acts=$('idStackActions');
+  acts.innerHTML=`
+    <button class="id-btn" data-act="toggleNoTop">${it.noStackTop?'Permitir apilar encima':'Bloquear apilado encima'}</button>
+    <button class="id-btn" data-act="toggleStack">${it.stackable?'Marcar no remontable':'Marcar remontable'}</button>
+  `;
+  acts.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>applyItemAction(it.id,b.dataset.act)));
+  // ADR
+  const adrSec=$('idAdrSection');
+  if(it.adr && ADR_CLASSES[it.adr]){
+    adrSec.style.display='block';
+    const info=ADR_CLASSES[it.adr];
+    $('idAdr').innerHTML=`<div class="id-adr-dia" style="background:${info.color}"><span style="transform:rotate(-45deg)">${it.adr}</span></div><div class="id-adr-txt">ADR clase ${it.adr}<small>${info.label}</small></div>`;
+    // Conflictos con otros bultos del camion
+    const neighbors=state.placed.filter(p=>p.id!==it.id && p.adr);
+    const conflicts=neighbors.filter(p=>adrConflict(it.adr, p.adr));
+    const compl=$('idCompl');
+    if(!neighbors.length) compl.innerHTML='<span class="ok">✓ Único ADR en el camión</span>';
+    else if(conflicts.length){
+      const classes=[...new Set(conflicts.map(c=>c.adr))].sort();
+      compl.innerHTML=`<span class="bad">✗ ${conflicts.length} bulto${conflicts.length>1?'s':''} con clases incompatibles: ${classes.join(', ')}</span><br><span class="ok">Mantén la separación configurada (${state.separation.adr} cm)</span>`;
+    } else {
+      const classes=[...new Set(neighbors.map(c=>c.adr))].sort();
+      compl.innerHTML=`<span class="ok">✓ Compatible con clases presentes: ${classes.join(', ')}</span>`;
+    }
+  } else {
+    adrSec.style.display='none';
+  }
+}
+
+function applyItemAction(id, act){
+  const p=state.placed.find(x=>x.id===id);
+  const src=state.items.find(x=>x.id===id);
+  if(!p) return;
+  if(act==='toggleNoTop'){
+    p.noStackTop=!p.noStackTop;
+    if(src) src.noStackTop=p.noStackTop;
+  } else if(act==='toggleStack'){
+    p.stackable=!p.stackable;
+    if(src) src.stackable=p.stackable;
+  }
+  state.selectedItem=p;
+  buildItemMeshes(state.placed);
+  openItemDetails(p);
+  updateKPIs();
+}
+
+// ===== ADR matrix modal =====
+function openAdrMatrix(){
+  const grid=$('adrMatrix'); if(!grid) return;
+  const classes=Object.keys(ADR_CLASSES);
+  const cells=[];
+  // corner
+  cells.push('<div class="adr-corner">clase</div>');
+  // header
+  for(const c of classes){
+    const info=ADR_CLASSES[c];
+    cells.push(`<div class="adr-hdr" title="${info.label}" style="border-bottom:3px solid ${info.color}">${c}</div>`);
+  }
+  // rows
+  for(const r of classes){
+    const rInfo=ADR_CLASSES[r];
+    cells.push(`<div class="adr-hdr" title="${rInfo.label}" style="border-left:3px solid ${rInfo.color}">${r}</div>`);
+    for(const c of classes){
+      if(r===c){cells.push('<div class="adr-cell self">—</div>'); continue;}
+      const bad=adrConflict(r,c);
+      // "warn": clases que no estan en la lista estricta pero pueden requerir separacion segun cantidad
+      // Simplificación: damos naranja si una direccion es incompatible y la otra no
+      const inverse=adrConflict(c,r);
+      if(bad && inverse) cells.push('<div class="adr-cell bad" title="Incompatible">✗</div>');
+      else if(bad || inverse) cells.push('<div class="adr-cell warn" title="Separación requerida">!</div>');
+      else cells.push('<div class="adr-cell ok" title="Compatible">✓</div>');
+    }
+  }
+  grid.innerHTML=cells.join('');
+  // Class list
+  const list=$('adrClassList');
+  list.innerHTML=classes.map(c=>{
+    const i=ADR_CLASSES[c];
+    return `<div class="adr-class-card"><div class="adr-class-dia" style="background:${i.color}"><span style="transform:rotate(-45deg)">${c}</span></div><div class="adr-class-txt"><b>Clase ${c}</b><small>${i.label}</small></div></div>`;
+  }).join('');
+  $('adrModal').classList.add('open');
 }
 
 function fitView(){
@@ -2732,6 +3115,7 @@ function updateKPIs(){
   $('axleAlerts').innerHTML=alerts.map(a=>`<div class="alert ${a.level}">${a.text}</div>`).join('');
 
   renderRecommendations(m, truck);
+  renderAdrInventory();
 
   $('statusText').textContent = `${placed.length} bultos · ${m.volPct.toFixed(0)}% · ${Math.round(m.totalW).toLocaleString()} kg`;
 
@@ -2790,6 +3174,34 @@ function renderRecommendations(m, truck){
   rg.innerHTML=recs.map(r=>`<div class="rec-item"><span class="rec-dot ${r.level}"></span><div class="rec-text"><div class="rec-title">${r.title}</div>${r.detail?`<div class="rec-detail">${r.detail}</div>`:''}</div></div>`).join('');
 }
 
+function renderAdrInventory(){
+  const sec=$('adrInvSection'); const list=$('adrInvList'); if(!sec||!list) return;
+  const adrItems=state.placed.filter(p=>p.adr && ADR_CLASSES[p.adr]);
+  if(!adrItems.length){sec.style.display='none'; return;}
+  sec.style.display='block';
+  // Agrupar por clase
+  const byClass={}; for(const it of adrItems){(byClass[it.adr]=byClass[it.adr]||[]).push(it);}
+  const classes=Object.keys(byClass).sort();
+  const conflicts=new Set();
+  for(let i=0;i<classes.length;i++) for(let j=i+1;j<classes.length;j++) if(adrConflict(classes[i],classes[j])){conflicts.add(classes[i]);conflicts.add(classes[j]);}
+  const html=classes.map(cls=>{
+    const info=ADR_CLASSES[cls];
+    const rows=byClass[cls];
+    const isConflict=conflicts.has(cls);
+    const level=isConflict?'bad':'warn';
+    const dot=`<span class="rec-dot ${level}"></span>`;
+    const items=rows.slice(0,6).map(it=>{
+      const pos=`x ${Math.round(it.x)}·y ${Math.round(it.y)} cm`;
+      return `<div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--ink-dim);cursor:pointer" data-pick="${it.id}"><span style="color:var(--ink);font-weight:600">${it.ref||'(sin ref)'}</span><span>${it.destination} · ${pos}</span></div>`;
+    }).join('');
+    const more=rows.length>6?`<div style="font-size:10px;color:var(--ink-dim);margin-top:3px">+${rows.length-6} más…</div>`:'';
+    return `<div class="rec-item"><div class="id-adr-dia" style="background:${info.color};width:26px;height:26px;font-size:12px;margin-top:1px"><span style="transform:rotate(-45deg)">${cls}</span></div><div class="rec-text"><div class="rec-title">Clase ${cls} · ${info.label} <span style="float:right;font-family:'JetBrains Mono',monospace">${rows.length}</span></div>${items}${more}${isConflict?'<div class="rec-detail" style="color:var(--ac-red);margin-top:4px">Incompatible con otra clase a bordo — verificar segregación</div>':''}</div></div>`;
+  }).join('');
+  list.innerHTML=html;
+  // click para seleccionar bulto
+  list.querySelectorAll('[data-pick]').forEach(el=>el.addEventListener('click',()=>selectItemById(el.dataset.pick)));
+}
+
 function renderSequenceTable(){
   const seqT=$('seqTitle'); const seqH=$('seqHint');
   if(seqT && seqH){
@@ -2816,6 +3228,7 @@ function renderSequenceTable(){
       const id=tr.dataset.id; const it=state.placed.find(p=>p.id===id);
       state.selectedItem=(state.selectedItem&&state.selectedItem.id===id)?null:it;
       renderSequenceTable(); buildItemMeshes(state.placed);
+      if(state.selectedItem) openItemDetails(state.selectedItem); else closeItemDetails();
     });
   });
 }
@@ -3358,6 +3771,7 @@ function init(){
     clearItemMeshes();
     $('emptyState').style.display='block'; $('fileStatus').textContent='';
     $('viewerScale').style.display='none'; $('viewerLegend').style.display='none';
+    closeItemDetails();
     updateKPIs(); renderSequenceTable(); renderUnloaded(); updateStepper();
   });
   $('btnDemo').addEventListener('click',()=>{loadDemo(); setTimeout(runOptimization,200);});
@@ -3375,6 +3789,12 @@ function init(){
   $('vcFit').addEventListener('click',fitView);
   $('vcExplode').addEventListener('click',(e)=>{state.exploded=!state.exploded; e.currentTarget.classList.toggle('active'); if(state.placed.length)buildItemMeshes(state.placed);});
   $('vcTransp').addEventListener('click',(e)=>{state.transparent=!state.transparent; e.currentTarget.classList.toggle('active'); if(state.placed.length)buildItemMeshes(state.placed);});
+
+  // item detail + ADR matrix
+  { const el=$('idClose'); if(el) el.addEventListener('click',()=>{state.selectedItem=null; if(state.placed.length) buildItemMeshes(state.placed); closeItemDetails();}); }
+  { const el=$('btnShowAdr'); if(el) el.addEventListener('click',openAdrMatrix); }
+  { const el=$('btnShowAdr2'); if(el) el.addEventListener('click',openAdrMatrix); }
+  $('adrModal').addEventListener('click',e=>{if(e.target===$('adrModal')) $('adrModal').classList.remove('open');});
 
   // help + theme
   $('btnHelp').addEventListener('click',()=>$('helpModal').classList.add('open'));
