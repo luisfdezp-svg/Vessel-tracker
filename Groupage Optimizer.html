@@ -1636,6 +1636,9 @@ select{cursor:pointer}
     <button class="icon-btn" id="btnHelp" title="Ayuda">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 1-1 1.7v.5"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
     </button>
+    <button class="icon-btn" id="btnClose" title="Cerrar aplicación">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+    </button>
   </div>
 </header>
 
@@ -4862,6 +4865,17 @@ function init(){
 
   // click outside modal closes
   $('helpModal').addEventListener('click',e=>{if(e.target===$('helpModal')) $('helpModal').classList.remove('open');});
+
+  // ===== Cerrar app =====
+  { const el=$('btnClose'); if(el) el.addEventListener('click',()=>{
+    if(!confirm('¿Cerrar Groupage Optimizer? Los datos quedan guardados en este dispositivo.')) return;
+    try{window.close();}catch(e){}
+    // window.close() solo funciona en ventanas abiertas por script o PWA instaladas.
+    // Si seguimos aqui, damos feedback al usuario.
+    setTimeout(()=>{
+      if(!document.hidden) alert('Tu navegador no permite cerrar automáticamente esta ventana. Ciérrala manualmente (⌘W / Ctrl+W) o sal desde el gestor de apps.');
+    },180);
+  }); }
 
   // ===== PWA: service worker + install prompt =====
   if('serviceWorker' in navigator){
