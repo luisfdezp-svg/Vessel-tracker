@@ -794,6 +794,28 @@ select{cursor:pointer}
 .alert.warn{border-color:var(--ac-amber); background:rgba(255,179,71,0.1); color:var(--ac-amber)}
 .alert.ok{border-color:var(--ac-green); background:rgba(93,216,137,0.1); color:var(--ac-green)}
 
+.rec-grid{display:grid; grid-template-columns:1fr; gap:5px}
+.rec-item{
+  display:flex; align-items:flex-start; gap:10px;
+  padding:8px 10px;
+  background:var(--bg-2);
+  border:1px solid var(--line);
+  border-radius:8px;
+  font-size:11.5px;
+  line-height:1.35;
+}
+.rec-dot{
+  width:10px; height:10px; border-radius:50%;
+  flex-shrink:0; margin-top:4px;
+  background:var(--ink-dim);
+}
+.rec-dot.ok{background:var(--ac-green)}
+.rec-dot.warn{background:var(--ac-amber)}
+.rec-dot.bad{background:var(--ac-red)}
+.rec-text{flex:1; color:var(--ink)}
+.rec-title{font-weight:600}
+.rec-detail{font-size:10px; color:var(--ink-dim); margin-top:2px; font-family:'JetBrains Mono',monospace}
+
 /* ================================================================
    SEQUENCE TABLE
    ================================================================ */
@@ -1505,9 +1527,27 @@ select{cursor:pointer}
           <label class="field"><span class="field-label">Peso <em>kg/ud</em></span><input type="number" id="mW" value="500"></label>
           <label class="field"><span class="field-label">Destino</span><select id="mDest"></select></label>
         </div>
+        <div class="form-grid-2">
+          <label class="field"><span class="field-label">Peso máx. encima <em>kg</em></span><input type="number" id="mMaxTop" value="0" min="0"></label>
+          <label class="field"><span class="field-label">ADR</span>
+            <select id="mAdr">
+              <option value="">— sin ADR —</option>
+              <option value="1">1 · Explosivos</option>
+              <option value="2">2 · Gases</option>
+              <option value="3">3 · Líq. inflamables</option>
+              <option value="4">4 · Sól. inflamables</option>
+              <option value="5">5 · Comburentes</option>
+              <option value="6">6 · Tóxicos</option>
+              <option value="7">7 · Radiactivos</option>
+              <option value="8">8 · Corrosivos</option>
+              <option value="9">9 · Misceláneos</option>
+            </select>
+          </label>
+        </div>
         <div class="checkrow">
           <label class="check"><input type="checkbox" id="mStack" checked><span>Remontable</span></label>
           <label class="check"><input type="checkbox" id="mFrag"><span>Frágil</span></label>
+          <label class="check"><input type="checkbox" id="mNoTop"><span>No apilar encima</span></label>
         </div>
         <button class="btn-primary btn-full" id="btnAddManual">Añadir bulto</button>
       </div>
@@ -1519,6 +1559,20 @@ select{cursor:pointer}
         <div class="section-num">04</div>
         <h2 class="section-title">Optimización</h2>
       </header>
+
+      <div class="field-label" style="margin-bottom:8px">Método carga / descarga</div>
+      <div class="level-picker" id="methodPicker" style="margin-bottom:14px">
+        <button class="level selected" data-method="lifo"><div class="lv-name">LIFO</div><div class="lv-desc">Último in · primero out</div></button>
+        <button class="level" data-method="fifo"><div class="lv-name">FIFO</div><div class="lv-desc">Primero in · primero out</div></button>
+        <button class="level" data-method="weight"><div class="lv-name">Por peso</div><div class="lv-desc">Pesado al fondo</div></button>
+        <button class="level" data-method="manual"><div class="lv-name">Manual</div><div class="lv-desc">Orden definido</div></button>
+      </div>
+
+      <div class="field-label" style="margin-bottom:6px">Separadores <em>cm</em></div>
+      <div class="form-grid-2" style="margin-bottom:14px">
+        <label class="field"><span class="field-label" style="font-size:9px">Entre destinos</span><input type="number" id="sepDest" value="5" min="0" max="300"></label>
+        <label class="field"><span class="field-label" style="font-size:9px">ADR incompatible</span><input type="number" id="sepAdr" value="40" min="0" max="300"></label>
+      </div>
 
       <div class="field-label" style="margin-bottom:8px">Nivel de cómputo</div>
       <div class="level-picker" id="levelPicker">
@@ -1667,14 +1721,33 @@ select{cursor:pointer}
         <b id="axCogVal">—</b>
       </div>
 
+      <div class="axle-cog">
+        <span>CdG Y (altura)</span>
+        <b id="axCogY">—</b>
+      </div>
+      <div class="axle-cog">
+        <span>CdG Z (lateral)</span>
+        <b id="axCogZ">—</b>
+      </div>
+
       <div class="alerts" id="axleAlerts"></div>
+    </section>
+
+    <section class="axle-section" id="recommendSection">
+      <header class="section-head">
+        <div class="section-num">R</div>
+        <h2 class="section-title">Recomendaciones</h2>
+      </header>
+      <div class="rec-grid" id="recGrid">
+        <div class="rec-item"><span class="rec-dot"></span><div class="rec-text">— sin datos —</div></div>
+      </div>
     </section>
 
     <section class="seq-section">
       <header class="section-head">
         <div class="section-num">07</div>
-        <h2 class="section-title">Secuencia LIFO</h2>
-        <span class="hint">Fondo → Frente</span>
+        <h2 class="section-title" id="seqTitle">Secuencia LIFO</h2>
+        <span class="hint" id="seqHint">Fondo → Frente</span>
       </header>
       <div class="seq-wrap">
         <table class="seq-table" id="seqTable">
@@ -1880,8 +1953,41 @@ const state = {
   transparent: false,
   optMeta: null,
   optLevel: 'deep',
-  boxStyle: 'solid'
+  boxStyle: 'solid',
+  loadingMethod: 'lifo',          // 'lifo' | 'fifo' | 'weight' | 'manual'
+  separation: {dest: 5, adr: 40}, // cm: entre destinos / entre ADR incompatibles
+  showCoG: true,
+  cogEnvelope: {xMin:0.2, xMax:0.7, zHalf:0.35} // fracciones de truck.L y truck.A/2
 };
+
+// ===== ADR (ADR 2023 · matriz simplificada de segregación) =====
+// Mapea clase -> clases incompatibles. Solo casos mas comunes en transporte por carretera.
+const ADR_CLASSES = {
+  '1':{label:'Explosivos',        color:'#ef4444'},
+  '2':{label:'Gases',             color:'#f59e0b'},
+  '3':{label:'Liq. inflamables',  color:'#fb923c'},
+  '4':{label:'Sol. inflamables',  color:'#fbbf24'},
+  '5':{label:'Comburentes',       color:'#facc15'},
+  '6':{label:'Tóxicos',           color:'#a78bfa'},
+  '7':{label:'Radiactivos',       color:'#22d3ee'},
+  '8':{label:'Corrosivos',        color:'#10b981'},
+  '9':{label:'Misceláneos',       color:'#64748b'}
+};
+const ADR_INCOMPATIBLE = {
+  '1':['1','2','3','4','5','6','7','8','9'],
+  '2':['1','3','5'],
+  '3':['1','5','6','8'],
+  '4':['1','5','8'],
+  '5':['1','2','3','4','6','8'],
+  '6':['1','3','5','9'],
+  '7':['1','2','3','4','5','6','8','9'],
+  '8':['1','3','4','5'],
+  '9':['1','6','7']
+};
+function adrConflict(a,b){
+  if(!a||!b||a===b) return false;
+  return (ADR_INCOMPATIBLE[a]||[]).includes(String(b));
+}
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
@@ -1911,9 +2017,11 @@ function normalizeType(t){
   if(s.includes('big')||s.includes('bag')||s.includes('saco')) return 'bigbag';
   return 'caja';
 }
-function makeItem({ref,type,L,A,H,weight,destination,stackable,fragile,maxTop}){
+function makeItem({ref,type,L,A,H,weight,destination,stackable,fragile,maxTop,adr,noStackTop}){
   if(type==='palet_eur' && (L<100||A<70)){L=120;A=80;}
   if(type==='palet_us' && (L<100||A<80)){L=120;A=100;}
+  let a = adr==null?null:String(adr).trim();
+  if(a && !ADR_CLASSES[a]) a=null;
   return {
     id: Math.random().toString(36).slice(2,10),
     ref: ref||'', type: type||'caja',
@@ -1922,6 +2030,8 @@ function makeItem({ref,type,L,A,H,weight,destination,stackable,fragile,maxTop}){
     stackable: stackable!==false,
     fragile: fragile===true,
     maxTop: +maxTop||0,
+    noStackTop: noStackTop===true,   // usuario forzó "no puede llevar nada encima"
+    adr: a,
     volume: (L*A*H)/1e6
   };
 }
@@ -1941,6 +2051,7 @@ function parseTable(rows){
   const iFrag=findCol('fragil','frágil','fragile');
   const iMaxTop=findCol('peso_max','maxtop','max encima');
   const iDims=findCol('dimensiones','medidas');
+  const iAdr=findCol('adr','imdg','clase peligr','peligro');
   const out=[];
   for(let r=1;r<rows.length;r++){
     const row=rows[r]; if(!row||row.every(c=>!c&&c!==0)) continue;
@@ -1958,8 +2069,13 @@ function parseTable(rows){
     const stk=iStk>=0?parseBoolean(row[iStk]):true;
     const frag=iFrag>=0?parseBoolean(row[iFrag]):false;
     const maxTop=iMaxTop>=0?(parseNum(row[iMaxTop])||0):0;
+    let adr=null;
+    if(iAdr>=0){
+      const v=String(row[iAdr]||'').trim();
+      const m=v.match(/([1-9])/); if(m) adr=m[1];
+    }
     for(let q=0;q<qty;q++){
-      out.push(makeItem({ref:qty>1?`${ref}/${q+1}`:String(ref),type:normalizeType(type),L,A,H,weight:w,destination:dest,stackable:stk!==false,fragile:frag===true,maxTop}));
+      out.push(makeItem({ref:qty>1?`${ref}/${q+1}`:String(ref),type:normalizeType(type),L,A,H,weight:w,destination:dest,stackable:stk!==false,fragile:frag===true,maxTop,adr}));
     }
   }
   return out;
@@ -1987,9 +2103,12 @@ function parseFreeText(text){
     if(!destination){const caps=line.match(/\b[A-ZÁÉÍÓÚÑ]{3,}\b/g); if(caps&&caps.length) destination=caps[caps.length-1];}
     const stackable=!/no.?remont|no.?apilab|no.?stack/i.test(u);
     const fragile=/frág|fragi|fragile/i.test(u);
+    let adr=null;
+    const adrM=line.match(/\bADR\s*(?:clase\s*)?([1-9])\b/i) || line.match(/\bclase\s*([1-9])\s*ADR\b/i);
+    if(adrM) adr=adrM[1];
     const ref=line.split(/[\s·,;|]+/)[0];
     for(let q=0;q<qty;q++){
-      out.push(makeItem({ref:qty>1?`${ref}/${q+1}`:ref,type,L,A,H,weight:w,destination,stackable,fragile,maxTop:0}));
+      out.push(makeItem({ref:qty>1?`${ref}/${q+1}`:ref,type,L,A,H,weight:w,destination,stackable,fragile,maxTop:0,adr}));
     }
   }
   return out;
@@ -2047,7 +2166,9 @@ function computeSupport(box, placed){
   if(supportedArea/baseArea<0.7) return {supported:false};
   for(const s of supporters){
     if(!s.stackable||s.fragile) return {supported:false};
+    if(s.noStackTop) return {supported:false};
     if(s.maxTop>0 && box.weight>s.maxTop) return {supported:false};
+    if(box.adr && s.adr && adrConflict(box.adr,s.adr)) return {supported:false};
   }
   return {supported:true,supporters};
 }
@@ -2081,7 +2202,7 @@ function packGroupGRASP(group, truck, startX, destName, opts, randSeed){
     const candidates=[];
     for(const ep of eps){
       for(const ori of orientations){
-        const box={x:ep.x,y:ep.y,z:ep.z,L:ori.dx,A:ori.dz,H:ori.dy,weight:it.weight,stackable:it.stackable,fragile:it.fragile,maxTop:it.maxTop,orientation:ori.label};
+        const box={x:ep.x,y:ep.y,z:ep.z,L:ori.dx,A:ori.dz,H:ori.dy,weight:it.weight,stackable:it.stackable,fragile:it.fragile,maxTop:it.maxTop,noStackTop:it.noStackTop,adr:it.adr,orientation:ori.label};
         if(!fitsInTruck(box,truck)) continue;
         let ok=true; for(const p of placed){if(overlaps(box,p)){ok=false;break;}} if(!ok) continue;
         const sup=computeSupport(box,placed); if(!sup.supported) continue;
@@ -2107,6 +2228,15 @@ function packGroupGRASP(group, truck, startX, destName, opts, randSeed){
   return {placed,unloaded,nextX};
 }
 
+function groupAdrClasses(group){
+  const s=new Set(); for(const it of (group||[])) if(it.adr) s.add(it.adr); return [...s];
+}
+function groupsConflict(a,b){
+  const ca=groupAdrClasses(a), cb=groupAdrClasses(b);
+  for(const x of ca) for(const y of cb) if(adrConflict(x,y)) return true;
+  return false;
+}
+
 async function optimize(items, truck, destinations, levelKey, progressCb){
   const opts=OPT_LEVELS[levelKey];
   const destOrder=destinations.map(d=>d.name.toUpperCase());
@@ -2116,16 +2246,44 @@ async function optimize(items, truck, destinations, levelKey, progressCb){
     if(destOrder.includes(d)){(byDest[d]=byDest[d]||[]).push(it);}else{unknown.push(it);}
   }
   if(unknown.length) byDest['_UNKNOWN_']=unknown;
-  const loadOrder=[...destOrder]; if(byDest['_UNKNOWN_']) loadOrder.unshift('_UNKNOWN_');
+
+  // Orden de carga segun metodo. x=0 es el FONDO (primera posicion cargada);
+  // LIFO -> el destino que se entrega primero debe cargarse el ULTIMO
+  // (queda cerca de la puerta, es decir, con mayor x, entra al final).
+  let loadOrder;
+  const method=state.loadingMethod||'lifo';
+  if(method==='lifo')      loadOrder=[...destOrder].reverse();
+  else if(method==='fifo') loadOrder=[...destOrder];
+  else if(method==='manual') loadOrder=[...destOrder]; // el usuario re-ordena en UI
+  else if(method==='weight'){
+    // Destinos con mas kg primero (al fondo, para lastre bajo)
+    const kg={}; for(const d of destOrder) kg[d]=(byDest[d]||[]).reduce((s,it)=>s+it.weight,0);
+    loadOrder=[...destOrder].sort((a,b)=>kg[b]-kg[a]);
+  } else loadOrder=[...destOrder];
+  if(byDest['_UNKNOWN_']) loadOrder.unshift('_UNKNOWN_');
+
+  const sepDest=Math.max(0,+state.separation.dest||0);
+  const sepAdr =Math.max(0,+state.separation.adr ||0);
 
   let best=null, bestScore=-Infinity;
   for(let iter=0;iter<opts.iters;iter++){
     const allPlaced=[], allUnloaded=[]; let cursorX=0;
+    let prevGroup=null;
     for(const destName of loadOrder){
       const group=byDest[destName]; if(!group||!group.length) continue;
+      // Gap entre grupos: separacion destino o mayor si hay incompatibilidad ADR
+      if(prevGroup){
+        const gap = groupsConflict(prevGroup,group) ? Math.max(sepDest,sepAdr) : sepDest;
+        cursorX += gap;
+      }
+      if(method==='weight'){
+        // Dentro del grupo, forzar pesado-primero (fondo/abajo)
+        group.sort((a,b)=>b.weight-a.weight);
+      }
       const seed=Math.floor(Math.random()*1e9)+iter*7919;
       const r=packGroupGRASP(group,truck,cursorX,destName,opts,seed);
       allPlaced.push(...r.placed); allUnloaded.push(...r.unloaded); cursorX=r.nextX;
+      prevGroup=group;
     }
     let totalW=allPlaced.reduce((s,p)=>s+p.weight,0);
     if(totalW>truck.maxKg){
@@ -2166,7 +2324,7 @@ async function optimize(items, truck, destinations, levelKey, progressCb){
           const orientations=getOrientations(ul);
           let bestCand=null, bestSc=Infinity;
           for(const ep of eps) for(const ori of orientations){
-            const box={x:ep.x,y:ep.y,z:ep.z,L:ori.dx,A:ori.dz,H:ori.dy,weight:ul.weight,stackable:ul.stackable,fragile:ul.fragile,maxTop:ul.maxTop,orientation:ori.label};
+            const box={x:ep.x,y:ep.y,z:ep.z,L:ori.dx,A:ori.dz,H:ori.dy,weight:ul.weight,stackable:ul.stackable,fragile:ul.fragile,maxTop:ul.maxTop,noStackTop:ul.noStackTop,adr:ul.adr,orientation:ori.label};
             if(!fitsInTruck(box,truck)) continue;
             let coll=false; for(const p of best.placed){if(overlaps(box,p)){coll=true;break;}} if(coll) continue;
             const sup=computeSupport(box,best.placed); if(!sup.supported) continue;
@@ -2205,10 +2363,22 @@ function computeMetrics(placed, truck){
   const truckVol=(truck.L*truck.A*truck.H)/1e6;
   let lmMax=0; for(const p of placed) if(p.x+p.L>lmMax) lmMax=p.x+p.L;
   const lm=lmMax/100;
-  let momentX=0; for(const p of placed) momentX+=p.weight*(p.x+p.L/2);
+  let momentX=0, momentY=0, momentZ=0;
+  for(const p of placed){
+    momentX+=p.weight*(p.x+p.L/2);
+    momentY+=p.weight*(p.y+p.H/2);
+    momentZ+=p.weight*(p.z+p.A/2 - truck.A/2);
+  }
   const cogX=totalW>0?momentX/totalW:truck.L/2;
+  const cogY=totalW>0?momentY/totalW:truck.H/3;
+  const cogZ=totalW>0?momentZ/totalW:0; // centrado en 0 (eje central lateral)
   const frontRatio=1-Math.max(0,Math.min(1,cogX/truck.L));
-  return {totalVol,truckVol,volPct:truckVol>0?totalVol/truckVol*100:0,totalW,weightPct:totalW/truck.maxKg*100,lm,lmPct:lm/(truck.L/100)*100,cogX,frontKg:totalW*frontRatio,rearKg:totalW*(1-frontRatio),itemsPlaced:placed.length};
+  // Envolvente admisible de CoG X
+  const env=state.cogEnvelope||{xMin:0.2,xMax:0.7,zHalf:0.35};
+  const cogXFrac=cogX/truck.L;
+  const cogZFrac=cogZ/(truck.A/2);
+  const cogOk=(cogXFrac>=env.xMin && cogXFrac<=env.xMax && Math.abs(cogZFrac)<=env.zHalf && cogY<=truck.H*0.55);
+  return {totalVol,truckVol,volPct:truckVol>0?totalVol/truckVol*100:0,totalW,weightPct:totalW/truck.maxKg*100,lm,lmPct:lm/(truck.L/100)*100,cogX,cogY,cogZ,cogXFrac,cogZFrac,cogOk,frontKg:totalW*frontRatio,rearKg:totalW*(1-frontRatio),itemsPlaced:placed.length};
 }
 
 // ============================================================
@@ -2325,6 +2495,15 @@ function buildItemMeshes(placed){
       const warn=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8), new THREE.MeshBasicMaterial({color:0xff4d5e}));
       warn.position.set(0,dy/2+0.06,0); mesh.add(warn);
     }
+    if(it.adr && ADR_CLASSES[it.adr]){
+      const chip=makeAdrLabel(it.adr);
+      chip.position.set(0,dy/2+0.22,0); mesh.add(chip);
+    }
+    if(it.noStackTop){
+      // marcador sutil: halo rojo encima
+      const cap=new THREE.Mesh(new THREE.RingGeometry(0.06,0.09,16), new THREE.MeshBasicMaterial({color:0xff4d5e,side:THREE.DoubleSide,transparent:true,opacity:0.7}));
+      cap.rotation.x=-Math.PI/2; cap.position.set(0,dy/2+0.02,0); mesh.add(cap);
+    }
     if(placed.length<=80){
       const label=makeSmallLabel(`${it.loadSeq}`);
       label.position.set(0,dy/2+0.12,0); mesh.add(label);
@@ -2332,6 +2511,66 @@ function buildItemMeshes(placed){
     mesh.userData={item:it};
     scene.add(mesh); itemMeshes.push(mesh);
   }
+  buildCoGMarker();
+}
+
+function makeAdrLabel(cls){
+  const info=ADR_CLASSES[cls]||{label:'ADR',color:'#ef4444'};
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const ctx=c.getContext('2d');
+  // Romboide ADR estandar
+  ctx.save();
+  ctx.translate(32,32); ctx.rotate(Math.PI/4);
+  ctx.fillStyle=info.color; ctx.fillRect(-20,-20,40,40);
+  ctx.strokeStyle='#0a0a0a'; ctx.lineWidth=3; ctx.strokeRect(-20,-20,40,40);
+  ctx.restore();
+  ctx.fillStyle='#0a0a0a'; ctx.font='bold 20px "JetBrains Mono",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(cls,32,38);
+  const tex=new THREE.CanvasTexture(c);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+  sp.scale.set(0.22,0.22,1);
+  return sp;
+}
+
+let cogGroup=null;
+function clearCoGMarker(){
+  if(cogGroup){
+    scene.remove(cogGroup);
+    cogGroup.traverse(o=>{if(o.geometry)o.geometry.dispose(); if(o.material){if(Array.isArray(o.material))o.material.forEach(mm=>mm.dispose()); else o.material.dispose();}});
+    cogGroup=null;
+  }
+}
+function buildCoGMarker(){
+  clearCoGMarker();
+  if(!state.showCoG||!state.placed.length) return;
+  const t=TRUCKS[state.truck];
+  const m=computeMetrics(state.placed,t);
+  const L=t.L/100, H=t.H/100, A=t.A/100;
+  cogGroup=new THREE.Group();
+  // Envolvente admisible en planta (plano Y = 0.015)
+  const env=state.cogEnvelope;
+  const envL=L*(env.xMax-env.xMin);
+  const envA=A*2*env.zHalf;
+  const envMat=new THREE.LineBasicMaterial({color:0x10b981,transparent:true,opacity:0.55});
+  const envGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(envL,0.005,envA));
+  const envBox=new THREE.LineSegments(envGeo,envMat);
+  envBox.position.set(L*(env.xMin+env.xMax)/2, 0.02, 0);
+  cogGroup.add(envBox);
+  // Cruz en planta
+  const cogCol=m.cogOk?0x10b981:0xff4d5e;
+  const cx=m.cogX/100, cz=m.cogZ/100, cy=m.cogY/100;
+  const crossMat=new THREE.LineBasicMaterial({color:cogCol,transparent:true,opacity:0.9});
+  const crossGeo1=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx-0.4,0.03,cz),new THREE.Vector3(cx+0.4,0.03,cz)]);
+  const crossGeo2=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx,0.03,cz-0.4),new THREE.Vector3(cx,0.03,cz+0.4)]);
+  cogGroup.add(new THREE.Line(crossGeo1,crossMat));
+  cogGroup.add(new THREE.Line(crossGeo2,crossMat));
+  // Bola en el CoG real (altura)
+  const sphere=new THREE.Mesh(new THREE.SphereGeometry(0.1,12,12), new THREE.MeshBasicMaterial({color:cogCol}));
+  sphere.position.set(cx,cy,cz); cogGroup.add(sphere);
+  // Vertical plomada
+  const plumb=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx,0.03,cz),new THREE.Vector3(cx,cy,cz)]);
+  cogGroup.add(new THREE.Line(plumb, new THREE.LineBasicMaterial({color:cogCol,transparent:true,opacity:0.5})));
+  scene.add(cogGroup);
 }
 
 function makeSmallLabel(text){
@@ -2434,9 +2673,12 @@ function updateKPIs(){
     $('axFrontVal').innerHTML='0 <em>kg</em>'; $('axRearVal').innerHTML='0 <em>kg</em>';
     $('axFrontFill').style.width='0%'; $('axRearFill').style.width='0%';
     $('axCogVal').textContent='—';
+    const axY=$('axCogY'); if(axY) axY.textContent='—';
+    const axZ=$('axCogZ'); if(axZ) axZ.textContent='—';
     $('cogDot').setAttribute('cx','120');
     $('cogLine').setAttribute('x1','120'); $('cogLine').setAttribute('x2','120');
     $('axleAlerts').innerHTML=''; $('optInfo').textContent='';
+    const rg=$('recGrid'); if(rg) rg.innerHTML='<div class="rec-item"><span class="rec-dot"></span><div class="rec-text">— sin datos —</div></div>';
     $('statusText').textContent=`${items.length} bulto${items.length!==1?'s':''} en cola`;
     return;
   }
@@ -2476,6 +2718,8 @@ function updateKPIs(){
   $('cogLine').setAttribute('x1', cogX.toFixed(1));
   $('cogLine').setAttribute('x2', cogX.toFixed(1));
   $('axCogVal').textContent=`${(m.cogX/100).toFixed(2)} m`;
+  const axY=$('axCogY'); if(axY) axY.textContent=`${(m.cogY/100).toFixed(2)} m`;
+  const axZ=$('axCogZ'); if(axZ) axZ.textContent=`${(m.cogZ>=0?'+':'')}${(m.cogZ).toFixed(1)} cm`;
 
   const alerts=[];
   if(m.weightPct>100) alerts.push({level:'danger',text:`⚠ Sobrecarga +${Math.round(m.totalW-truck.maxKg)} kg`});
@@ -2487,6 +2731,8 @@ function updateKPIs(){
   if(state.unloaded.length) alerts.push({level:'danger',text:`${state.unloaded.length} bulto${state.unloaded.length!==1?'s':''} sin cargar`});
   $('axleAlerts').innerHTML=alerts.map(a=>`<div class="alert ${a.level}">${a.text}</div>`).join('');
 
+  renderRecommendations(m, truck);
+
   $('statusText').textContent = `${placed.length} bultos · ${m.volPct.toFixed(0)}% · ${Math.round(m.totalW).toLocaleString()} kg`;
 
   if(state.optMeta){
@@ -2495,7 +2741,63 @@ function updateKPIs(){
   }
 }
 
+function renderRecommendations(m, truck){
+  const rg=$('recGrid'); if(!rg) return;
+  const recs=[];
+  // CoG longitudinal
+  const xFrac=m.cogXFrac;
+  const env=state.cogEnvelope;
+  if(xFrac<env.xMin-0.05 || xFrac>env.xMax+0.05) recs.push({level:'bad',title:'CdG longitudinal fuera de envolvente',detail:`x/L = ${(xFrac*100).toFixed(0)}% (ideal ${Math.round(env.xMin*100)}–${Math.round(env.xMax*100)}%)`});
+  else if(xFrac<env.xMin || xFrac>env.xMax) recs.push({level:'warn',title:'CdG longitudinal en el borde',detail:`x/L = ${(xFrac*100).toFixed(0)}%`});
+  else recs.push({level:'ok',title:'CdG longitudinal correcto',detail:`x = ${(m.cogX/100).toFixed(2)} m · ${(xFrac*100).toFixed(0)}% de L`});
+  // CoG lateral (Z)
+  const absZ=Math.abs(m.cogZFrac);
+  if(absZ>env.zHalf) recs.push({level:'bad',title:'CdG lateral descentrado',detail:`${(m.cogZ).toFixed(1)} cm respecto al eje (máx ${Math.round(env.zHalf*truck.A/2)} cm)`});
+  else if(absZ>env.zHalf*0.7) recs.push({level:'warn',title:'CdG lateral con deriva',detail:`${(m.cogZ).toFixed(1)} cm del eje`});
+  else recs.push({level:'ok',title:'CdG lateral centrado',detail:`desviación ${(m.cogZ).toFixed(1)} cm`});
+  // CoG altura
+  if(m.cogY>truck.H*0.55) recs.push({level:'bad',title:'CdG alto',detail:`Y = ${(m.cogY/100).toFixed(2)} m (aceptable ≤ ${(truck.H*0.55/100).toFixed(2)} m). Reordenar pesados abajo.`});
+  else if(m.cogY>truck.H*0.45) recs.push({level:'warn',title:'CdG medio-alto',detail:`Y = ${(m.cogY/100).toFixed(2)} m`});
+  else recs.push({level:'ok',title:'CdG bajo',detail:`Y = ${(m.cogY/100).toFixed(2)} m`});
+  // Peso total y ejes
+  const frontMax=12000, rearMax=20000;
+  if(m.weightPct>100) recs.push({level:'bad',title:'Sobrecarga total',detail:`+${Math.round(m.totalW-truck.maxKg)} kg sobre MMA`});
+  else if(m.weightPct>90) recs.push({level:'warn',title:'Cerca del MMA',detail:`${m.weightPct.toFixed(1)}% del peso máximo`});
+  else recs.push({level:'ok',title:'Peso total dentro de límite',detail:`${Math.round(m.totalW).toLocaleString()} kg (${m.weightPct.toFixed(1)}%)`});
+  if(m.frontKg>frontMax||m.rearKg>rearMax) recs.push({level:'bad',title:'Eje sobrecargado',detail:`Del ${Math.round(m.frontKg).toLocaleString()}/${frontMax} · Tras ${Math.round(m.rearKg).toLocaleString()}/${rearMax}`});
+  // ADR
+  const classes=groupAdrClasses(state.placed);
+  let adrConflicts=0;
+  for(let i=0;i<classes.length;i++) for(let j=i+1;j<classes.length;j++) if(adrConflict(classes[i],classes[j])) adrConflicts++;
+  if(!classes.length) recs.push({level:'ok',title:'Sin mercancía ADR',detail:'No hay bultos declarados peligrosos'});
+  else if(adrConflicts>0) recs.push({level:'bad',title:`ADR incompatible (${adrConflicts} par${adrConflicts>1?'es':''})`,detail:`Clases a bordo: ${classes.join(', ')} — revisa matriz de segregación`});
+  else recs.push({level:'warn',title:`Mercancía ADR (${classes.length} clase${classes.length>1?'s':''})`,detail:`Clases: ${classes.map(c=>c+'·'+(ADR_CLASSES[c]?.label||'')).join('; ')}`});
+  // Separación entre destinos
+  if(state.separation.dest<3) recs.push({level:'warn',title:'Separación mínima baja',detail:`Solo ${state.separation.dest} cm entre destinos — riesgo de confusión en descarga`});
+  // Remontes y maxTop
+  const stacked=state.placed.filter(p=>p.supporters&&p.supporters.length).length;
+  const noStackUsed=state.items.filter(i=>i.noStackTop).length;
+  recs.push({level:'ok',title:`Remontes: ${stacked}/${state.placed.length}`,detail:noStackUsed?`${noStackUsed} bulto${noStackUsed>1?'s':''} marcado${noStackUsed>1?'s':''} "no apilar encima"`:'sin restricciones manuales'});
+  // Altura maxima - detectar bultos que casi tocan techo
+  const maxY=state.placed.reduce((mx,p)=>Math.max(mx,p.y+p.H),0);
+  const headroom=truck.H-maxY;
+  if(headroom<5) recs.push({level:'warn',title:'Altura casi llena',detail:`${headroom.toFixed(0)} cm libres al techo`});
+  // Unloaded
+  if(state.unloaded.length) recs.push({level:'bad',title:`${state.unloaded.length} bulto${state.unloaded.length>1?'s':''} sin cargar`,detail:'Requiere servicio adicional o reequilibrado'});
+  // Ocupacion
+  if(m.volPct<60) recs.push({level:'warn',title:'Ocupación baja',detail:`${m.volPct.toFixed(0)}% — considera grupaje adicional`});
+
+  rg.innerHTML=recs.map(r=>`<div class="rec-item"><span class="rec-dot ${r.level}"></span><div class="rec-text"><div class="rec-title">${r.title}</div>${r.detail?`<div class="rec-detail">${r.detail}</div>`:''}</div></div>`).join('');
+}
+
 function renderSequenceTable(){
+  const seqT=$('seqTitle'); const seqH=$('seqHint');
+  if(seqT && seqH){
+    const titles={lifo:'Secuencia LIFO',fifo:'Secuencia FIFO',weight:'Secuencia por peso',manual:'Secuencia manual'};
+    const hints ={lifo:'Fondo → Frente',fifo:'Frente → Fondo',weight:'Pesado al fondo',manual:'Orden configurado'};
+    seqT.textContent=titles[state.loadingMethod]||'Secuencia';
+    seqH.textContent=hints[state.loadingMethod]||'';
+  }
   const tbody=$('seqTable').querySelector('tbody');
   if(!state.placed.length){tbody.innerHTML='<tr><td colspan="5" class="seq-empty">— sin datos —</td></tr>';return;}
   const rows=[...state.placed].sort((a,b)=>a.loadSeq-b.loadSeq);
@@ -2637,17 +2939,17 @@ function loadDemo(){
   state.items=[];
   const demo=[
     {ref:'MAD-001',type:'palet_eur',L:120,A:80,H:140,weight:620,destination:'MADRID',stackable:true,fragile:false,maxTop:500,qty:6},
-    {ref:'MAD-002',type:'palet_eur',L:120,A:80,H:90,weight:380,destination:'MADRID',stackable:true,fragile:false,maxTop:400,qty:4},
-    {ref:'MAD-003',type:'bobina',L:100,A:100,H:110,weight:780,destination:'MADRID',stackable:false,fragile:false,maxTop:0,qty:2},
+    {ref:'MAD-002',type:'palet_eur',L:120,A:80,H:90,weight:380,destination:'MADRID',stackable:true,fragile:false,maxTop:400,qty:4,adr:'3'},
+    {ref:'MAD-003',type:'bobina',L:100,A:100,H:110,weight:780,destination:'MADRID',stackable:false,fragile:false,maxTop:0,qty:2,noStackTop:true},
     {ref:'VAL-001',type:'palet_us',L:120,A:100,H:160,weight:540,destination:'VALENCIA',stackable:true,fragile:false,maxTop:300,qty:5},
     {ref:'VAL-002',type:'caja',L:80,A:60,H:70,weight:85,destination:'VALENCIA',stackable:true,fragile:true,maxTop:0,qty:8},
     {ref:'VAL-003',type:'bigbag',L:100,A:100,H:130,weight:950,destination:'VALENCIA',stackable:false,fragile:false,maxTop:0,qty:3},
     {ref:'BCN-001',type:'palet_eur',L:120,A:80,H:170,weight:490,destination:'BARCELONA',stackable:true,fragile:false,maxTop:350,qty:7},
-    {ref:'BCN-002',type:'jaula',L:120,A:100,H:180,weight:320,destination:'BARCELONA',stackable:false,fragile:false,maxTop:0,qty:3},
+    {ref:'BCN-002',type:'jaula',L:120,A:100,H:180,weight:320,destination:'BARCELONA',stackable:false,fragile:false,maxTop:0,qty:3,adr:'8'},
     {ref:'BCN-003',type:'caja',L:60,A:40,H:50,weight:25,destination:'BARCELONA',stackable:true,fragile:false,maxTop:100,qty:12}
   ];
   for(const d of demo) for(let i=0;i<d.qty;i++){
-    state.items.push(makeItem({ref:`${d.ref}/${i+1}`,type:d.type,L:d.L,A:d.A,H:d.H,weight:d.weight,destination:d.destination,stackable:d.stackable,fragile:d.fragile,maxTop:d.maxTop}));
+    state.items.push(makeItem({ref:`${d.ref}/${i+1}`,type:d.type,L:d.L,A:d.A,H:d.H,weight:d.weight,destination:d.destination,stackable:d.stackable,fragile:d.fragile,maxTop:d.maxTop,adr:d.adr||null,noStackTop:d.noStackTop===true}));
   }
   renderDestinations(); renderManualDestSelect();
   $('fileStatus').textContent=`✓ Demo: ${state.items.length} bultos, 3 destinos`;
@@ -3013,7 +3315,10 @@ function init(){
     const L=parseNum($('mL').value)||100, A=parseNum($('mA').value)||100, H=parseNum($('mH').value)||100;
     const W=parseNum($('mW').value)||100, Q=parseInt($('mQ').value)||1;
     const dest=$('mDest').value, stk=$('mStack').checked, frag=$('mFrag').checked;
-    for(let i=0;i<Q;i++) state.items.push(makeItem({ref:Q>1?`${ref}/${i+1}`:ref,type,L,A,H,weight:W,destination:dest,stackable:stk,fragile:frag,maxTop:0}));
+    const maxTop=parseNum(($('mMaxTop')||{}).value)||0;
+    const adrSel=($('mAdr')||{}).value||''; const adr=adrSel||null;
+    const noTop=(($('mNoTop')||{}).checked)===true;
+    for(let i=0;i<Q;i++) state.items.push(makeItem({ref:Q>1?`${ref}/${i+1}`:ref,type,L,A,H,weight:W,destination:dest,stackable:stk,fragile:frag,maxTop,adr,noStackTop:noTop}));
     $('fileStatus').textContent=`✓ ${Q} bulto${Q!==1?'s':''} añadido${Q!==1?'s':''}`;
     $('itemCount').textContent=state.items.length;
     updateStepper();
@@ -3024,14 +3329,28 @@ function init(){
     renderDestinations(); renderManualDestSelect();
   });
 
-  // level picker
-  document.querySelectorAll('.level').forEach(l=>{
+  // level picker (scoped)
+  document.querySelectorAll('#levelPicker .level').forEach(l=>{
     l.addEventListener('click',()=>{
-      document.querySelectorAll('.level').forEach(x=>x.classList.remove('selected'));
+      document.querySelectorAll('#levelPicker .level').forEach(x=>x.classList.remove('selected'));
       l.classList.add('selected');
       state.optLevel=l.dataset.level;
     });
   });
+  // method picker (carga/descarga)
+  document.querySelectorAll('#methodPicker .level').forEach(l=>{
+    l.addEventListener('click',()=>{
+      document.querySelectorAll('#methodPicker .level').forEach(x=>x.classList.remove('selected'));
+      l.classList.add('selected');
+      state.loadingMethod=l.dataset.method;
+      if(state.placed.length) renderSequenceTable();
+    });
+  });
+  const onSepChange=()=>{
+    const d=parseFloat($('sepDest').value); if(!isNaN(d)) state.separation.dest=Math.max(0,d);
+    const a=parseFloat($('sepAdr').value);  if(!isNaN(a)) state.separation.adr =Math.max(0,a);
+  };
+  ['sepDest','sepAdr'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',onSepChange);});
 
   $('btnRun').addEventListener('click',()=>{closeIfNarrow(); runOptimization();});
   $('btnClear').addEventListener('click',()=>{
