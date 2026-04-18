@@ -1,0 +1,53 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.luisfdezp.groupage'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.luisfdezp.groupage"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            def storeFromEnv = System.getenv("SIGNING_KEYSTORE")
+            storeFile storeFromEnv ? file(storeFromEnv) : file("../keystore/release.jks")
+            storePassword System.getenv("SIGNING_KEYSTORE_PASSWORD") ?: "groupage2026"
+            keyAlias System.getenv("SIGNING_KEY_ALIAS") ?: "groupage"
+            keyPassword System.getenv("SIGNING_KEY_PASSWORD") ?: "groupage2026"
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES','META-INF/LICENSE','META-INF/NOTICE']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.webkit:webkit:1.10.0'
+}

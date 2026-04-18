@@ -1,0 +1,60 @@
+GROUPAGE OPTIMIZER — Guía de instalación
+==========================================
+
+Este archivo (Groupage-app.html, 2.2 MB) contiene todo el código de la app.
+No necesita conexión a internet después de la primera vez.
+
+
+▶ ANDROID (recomendado: envío por WhatsApp o email)
+---------------------------------------------------
+1. Recibe el archivo por WhatsApp o email.
+2. Toca el archivo → Chrome (o tu navegador) lo abre.
+3. La app funciona al 100%. Para tenerla como app:
+   - Chrome: menú ⋮ → "Instalar app" (si aparece) o "Añadir a pantalla inicio".
+   - Queda con su icono en el launcher igual que cualquier otra app.
+
+
+▶ iPHONE / iPAD
+---------------
+⚠ iOS bloquea JavaScript en el preview de Archivos. El doble-clic NO FUNCIONA.
+  Hay que abrir el HTML dentro de Safari. Dos formas fiables:
+
+  OPCIÓN A — vía email (2 toques):
+    1. Envíate a ti mismo el archivo por email.
+    2. Abre el correo en iPhone → toca el adjunto → debería abrir Safari.
+    3. Si abre el preview, pulsa el botón "Compartir" (↑) → "Safari".
+    4. Una vez en Safari: Compartir → "Añadir a pantalla de inicio" → app.
+
+  OPCIÓN B — vía URL directa (sin descargar nada, recomendado):
+    1. Abre en Safari:
+       https://luisfdezp-svg.github.io/vessel-tracker/Groupage%20Optimizer.html
+    2. Botón Compartir (↑) → "Añadir a pantalla de inicio".
+    3. La app queda instalada con icono, funciona offline después de la
+       primera carga, y se actualiza sola al abrir con conexión.
+
+
+▶ PC / MAC / LINUX
+-------------------
+- Doble-clic sobre Groupage-app.html → se abre en tu navegador predeterminado.
+- Para tenerla como app de escritorio: con la página abierta en Chrome/Edge,
+  menú → "Instalar esta app" / "Instalar Groupage Optimizer".
+
+
+▶ WHATSAPP BLOQUEA EL HTML
+--------------------------
+WhatsApp a veces marca .html como sospechoso. Solución:
+  1. Comprime el archivo a ZIP antes de enviar.
+  2. Envíalo como "Documento" (no como imagen/vídeo).
+  3. Receptor descomprime y procede con las instrucciones de arriba.
+
+
+▶ QUÉ INCLUYE EL ARCHIVO
+------------------------
+- Visor 3D de carga (Three.js r128)
+- Lectura/escritura Excel (SheetJS 0.18.5)
+- Generación PDF (jsPDF 2.5.1 + html2canvas 1.4.1)
+- Módulos: ADR, CdG, amarre EN 12195-1, plantillas,
+  instrucciones origen/destino, XLSX/CSV/JSON, propuestas automáticas.
+
+Tipografías Google Fonts caen a las del sistema si no hay red — la app
+funciona idéntica, solo varía la estética tipográfica.

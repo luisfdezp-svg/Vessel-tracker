@@ -1,0 +1,25 @@
+{
+  "name": "Groupage Optimizer",
+  "short_name": "Groupage",
+  "description": "Optimizador 3D de carga consolidada: ADR, CdG, amarre EN 12195-1 y documentación lista para imprimir",
+  "start_url": "./Groupage%20Optimizer.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "lang": "es",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    {
+      "src": "./icon-groupage.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Cargar demo", "url": "./Groupage%20Optimizer.html#demo" },
+    { "name": "Matriz ADR",  "url": "./Groupage%20Optimizer.html#adr" }
+  ]
+}
