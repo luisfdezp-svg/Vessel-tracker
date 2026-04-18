@@ -2,7 +2,7 @@
   "name": "Vessel Tracker Pro",
   "short_name": "VTrack",
   "description": "Seguimiento AIS + manual de buques con alertas",
-  "start_url": "./index.html",
+  "start_url": "./vessel-tracker.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

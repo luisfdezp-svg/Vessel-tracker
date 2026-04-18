@@ -1,7 +1,9 @@
-const CACHE = 'vt6-v1';
+const CACHE = 'vt6-v2';
 const SHELL = [
   './',
   './index.html',
+  './vessel-tracker.html',
+  './Groupage Optimizer.html',
   './manifest.json',
   './icon.svg',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
@@ -49,7 +51,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, copy));
         }
         return res;
-      }).catch(() => hit || caches.match('./index.html'));
+      }).catch(() => hit || caches.match('./vessel-tracker.html') || caches.match('./index.html'));
       return hit || fetchPromise;
     })
   );
