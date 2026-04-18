@@ -957,7 +957,8 @@ select{cursor:pointer}
    SEQUENCE TABLE
    ================================================================ */
 .seq-wrap{
-  max-height:260px; overflow-y:auto;
+  max-height:260px; overflow:auto;
+  -webkit-overflow-scrolling:touch;
   background:var(--bg-2);
   border:1px solid var(--line);
   border-radius:8px;
@@ -1520,6 +1521,40 @@ select{cursor:pointer}
   .brand-sub{display:none}
   .topbar{padding:10px 14px}
 }
+
+/* Ajustes finos para phones estrechos (<=420 px) */
+@media(max-width:420px){
+  /* Modal padding compacto */
+  .modal{padding:22px 16px}
+  .modal h2{font-size:16px; margin-bottom:4px}
+  .modal-lead{font-size:11.5px}
+  /* Form-grid-3 en modales: L y A arriba, H abajo a ancho completo */
+  .modal .form-grid-3{grid-template-columns:1fr 1fr; gap:6px}
+  .modal .form-grid-3 > :nth-child(3){grid-column:1 / -1}
+  /* Modal de edicion de bulto: acciones en 2 filas (guardar full, dup+del mitades) */
+  #iemSave{flex:1 1 100% !important; margin-bottom:4px}
+  #iemDup, #iemDel{flex:1 1 calc(50% - 3px) !important}
+  #itemEditModal .modal > div:last-child{flex-wrap:wrap}
+  /* Lista de bultos: flags pasan a nueva fila para no pisar la info */
+  .item-row{display:flex; flex-wrap:wrap; align-items:center; gap:6px}
+  .item-row .ir-main{flex:1 1 auto; min-width:0}
+  .item-row > div:last-child{flex:1 1 100%; padding-left:14px; justify-content:flex-start !important}
+  /* Propuestas: una sola columna */
+  .prop-grid{grid-template-columns:1fr}
+  /* Grid documentacion: botones mas compactos */
+  .doc-btn{padding:7px 8px; font-size:10px}
+  .doc-btn svg{width:12px; height:12px}
+  /* Matriz ADR mas densa */
+  .adr-matrix{grid-template-columns:repeat(10, 30px)}
+  .adr-classes{grid-template-columns:1fr}
+  /* Panel detalle bulto en bottom sheet: asegurar que cabe dentro de la pantalla */
+  .item-detail{max-height:60vh}
+  .id-grid{grid-template-columns:1fr 1fr}
+}
+
+/* Sidebars angostos (drawer en movil, 360 px): que las 3 casillas L/A/H respiren */
+.left-panel .form-grid-3{gap:6px}
+.left-panel .form-grid-3 input{padding:8px}
 
 </style>
 </head>
