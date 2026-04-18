@@ -43,9 +43,13 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
-      - name: Setup Gradle
+      - name: Install Gradle 8.7
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
 
       - name: Build release APK
         env:
@@ -54,8 +58,8 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS || 'groupage' }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD || 'groupage2026' }}
         run: |
-          gradle wrapper --gradle-version 8.7
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          gradle --version
+          gradle :app:assembleRelease --no-daemon --stacktrace
 
       - name: Rename APK
         run: |
