@@ -1205,28 +1205,59 @@ button { background: none; border: none; cursor: pointer; }
     transform: translateX(-100%);
     transition: transform 0.25s ease-out;
     box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+    padding-top: 44px; /* room for close button */
   }
   .sidebar.open { transform: translateX(0); }
+
+  /* Backdrop dims the map and lets user tap to close */
+  .sidebar-backdrop {
+    position: fixed;
+    top: 44px; bottom: 32px; left: 0; right: 0;
+    background: rgba(8,12,20,0.5);
+    backdrop-filter: blur(2px);
+    z-index: 599;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out;
+  }
+  .sidebar-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
 
   /* Inspector becomes bottom sheet */
   .inspector {
     position: fixed;
     left: 0; right: 0; bottom: 32px;
     z-index: 600;
-    height: 60vh;
+    height: 70vh;
     border-left: none;
     border-top: 1px solid var(--border);
-    transform: translateY(calc(100% - 56px));
+    transform: translateY(100%);
     transition: transform 0.28s ease-out;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
   }
   .inspector.open { transform: translateY(0); }
-  .inspector::before {
-    content:''; position: absolute;
-    top: 6px; left: 50%; transform: translateX(-50%);
-    width: 36px; height: 3px;
+
+  /* Drag handle — visible bar at top, taps to toggle */
+  .insp-handle {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: var(--panel);
+    z-index: 2;
+  }
+  .insp-handle::before {
+    content:'';
+    width: 40px; height: 4px;
     background: var(--border-2);
     border-radius: 2px;
   }
+  .insp-handle:active::before { background: var(--cyan); }
 
   /* Mobile FAB triggers */
   .fab {
@@ -1241,7 +1272,13 @@ button { background: none; border: none; cursor: pointer; }
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   }
   .fab.fleet { top: 56px; left: 12px; }
-  .fab.inspector { bottom: 96px; right: 12px; padding: 0 12px; gap: 8px; width: auto; height: 40px; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+  .fab.inspector {
+    bottom: 44px; right: 12px;
+    padding: 0 14px; gap: 8px;
+    width: auto; height: 40px;
+    font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+    z-index: 700; /* always above inspector */
+  }
 
   /* Topbar collapses stats */
   .tstat { padding: 0 9px; min-width: 0; }
@@ -1256,18 +1293,22 @@ button { background: none; border: none; cursor: pointer; }
   /* AIS status auto-collapse */
   .ais-status { top: 56px; left: auto; right: 12px; max-width: 220px; }
 
-  /* Hide sidebar trigger on desktop */
+  /* Sidebar close button — large touch target */
   .sb-close {
     position: absolute; top: 8px; right: 8px;
-    background: none; border: 1px solid var(--border-2); color: var(--dim);
-    width: 26px; height: 26px;
+    background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text);
+    width: 36px; height: 36px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
+    font-size: 18px; font-weight: 600;
+    border-radius: 4px;
+    z-index: 10;
+    cursor: pointer;
   }
+  .sb-close:active { background: var(--cyan-dim); border-color: var(--cyan); color: var(--cyan); }
 }
 
 @media (min-width: 1024px) {
-  .fab, .sb-close { display: none !important; }
+  .fab, .sb-close, .sidebar-backdrop, .insp-handle { display: none !important; }
 }
 
 /* ============================================================
@@ -1414,13 +1455,13 @@ button { background: none; border: none; cursor: pointer; }
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<script src="data.js?v=15"></script>
-<script src="ais-service.js?v=15"></script>
-<script src="port-metrics.js?v=15"></script>
-<script src="vessel-history.js?v=15"></script>
-<script src="alerts-engine.js?v=15"></script>
-<script type="text/babel" src="tweaks-panel.jsx?v=15"></script>
-<script type="text/babel" src="editor.jsx?v=15"></script>
-<script type="text/babel" src="app.jsx?v=15"></script>
+<script src="data.js?v=16"></script>
+<script src="ais-service.js?v=16"></script>
+<script src="port-metrics.js?v=16"></script>
+<script src="vessel-history.js?v=16"></script>
+<script src="alerts-engine.js?v=16"></script>
+<script type="text/babel" src="tweaks-panel.jsx?v=16"></script>
+<script type="text/babel" src="editor.jsx?v=16"></script>
+<script type="text/babel" src="app.jsx?v=16"></script>
 </body>
 </html>

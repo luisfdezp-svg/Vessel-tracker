@@ -2533,6 +2533,13 @@ function App() {
           setSelectedMmsi(String(v.mmsi));
         }}
       />
+      {isMobile && (
+        <div
+          className={'sidebar-backdrop'+(sidebarOpen?' open':'')}
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <MapView
         vessels={vessels} ports={livePorts}
         discovered={discovered}
@@ -2574,11 +2581,14 @@ function App() {
       )}
 
       <div className={'inspector'+(isMobile && inspectorOpen?' open':'')}>
-        <div className="insp-tabs" onClick={() => isMobile && setInspectorOpen(o => !o)}>
+        {isMobile && (
+          <div className="insp-handle" onClick={() => setInspectorOpen(o => !o)} aria-label="Toggle inspector" />
+        )}
+        <div className="insp-tabs">
           {tabs.map(t => (
             <button key={t.k}
               className={'insp-tab'+(activeTab===t.k?' active':'')}
-              onClick={(e) => { e.stopPropagation(); setActiveTab(t.k); if (isMobile) setInspectorOpen(true); }}
+              onClick={() => { setActiveTab(t.k); if (isMobile) setInspectorOpen(true); }}
             >{t.l}</button>
           ))}
         </div>
