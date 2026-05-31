@@ -12,7 +12,7 @@ def signingStorePassword = envOrNull("SIGNING_KEYSTORE_PASSWORD")
 def signingKeyAlias = envOrNull("SIGNING_KEY_ALIAS")
 def signingKeyPassword = envOrNull("SIGNING_KEY_PASSWORD")
 def hasReleaseSigning = [signingKeystore, signingStorePassword, signingKeyAlias, signingKeyPassword].every { it != null }
-def localVersionCode = ((System.currentTimeMillis() / 1000L) % 100000000L) as Integer
+def defaultVersionCode = 1
 
 android {
     namespace 'com.luisfdezp.groupage'
@@ -22,7 +22,7 @@ android {
         applicationId "com.luisfdezp.groupage"
         minSdk 26
         targetSdk 34
-        versionCode (envOrNull("VERSION_CODE") ?: localVersionCode.toString()).toInteger()
+        versionCode (envOrNull("VERSION_CODE") ?: defaultVersionCode.toString()).toInteger()
         versionName envOrNull("VERSION_NAME") ?: "1.0.0-dev"
     }
 

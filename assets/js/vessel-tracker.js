@@ -120,7 +120,7 @@ function syncT(){
 // ===== VESSELS =====
 function addV(){
   var m=sanitizeText(document.getElementById('mmsiIn').value,20),n=sanitizeText(document.getElementById('nameIn').value,60);
-  if(!/^[0-9]{6,9}$/.test(m))return;
+  if(!/^[0-9]{9}$/.test(m))return;
   if(!m||TV.find(function(x){return x.m===m})||TV.length>=20)return;
   TV.push({m:m,n:n||m});
   document.getElementById('mmsiIn').value='';document.getElementById('nameIn').value='';

@@ -61,10 +61,10 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          test -n "$SIGNING_KEYSTORE_BASE64" || (echo "Falta secret SIGNING_KEYSTORE_BASE64" && exit 1)
-          test -n "$SIGNING_KEYSTORE_PASSWORD" || (echo "Falta secret SIGNING_KEYSTORE_PASSWORD" && exit 1)
-          test -n "$SIGNING_KEY_ALIAS" || (echo "Falta secret SIGNING_KEY_ALIAS" && exit 1)
-          test -n "$SIGNING_KEY_PASSWORD" || (echo "Falta secret SIGNING_KEY_PASSWORD" && exit 1)
+          test -n "$SIGNING_KEYSTORE_BASE64" || { echo "Falta secret SIGNING_KEYSTORE_BASE64"; exit 1; }
+          test -n "$SIGNING_KEYSTORE_PASSWORD" || { echo "Falta secret SIGNING_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$SIGNING_KEY_ALIAS" || { echo "Falta secret SIGNING_KEY_ALIAS"; exit 1; }
+          test -n "$SIGNING_KEY_PASSWORD" || { echo "Falta secret SIGNING_KEY_PASSWORD"; exit 1; }
 
       - name: Preparar keystore temporal
         shell: bash
@@ -72,7 +72,7 @@ jobs:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
         run: |
           echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
-          test -s "$RUNNER_TEMP/release.jks" || (echo "Keystore vacío o inválido" && exit 1)
+          test -s "$RUNNER_TEMP/release.jks" || { echo "Keystore vacío o inválido"; exit 1; }
 
       - name: Build release APK
         env:

@@ -1,6 +1,3 @@
-const CACHE = 'vt6-v14';
-const RUNTIME = 'vt6-runtime-v1';
-const RUNTIME_CDN = 'vt6-cdn-v1';
 const SHELL = [
   './',
   './index.html',
@@ -15,6 +12,17 @@ const SHELL = [
   './icon.svg',
   './icon-groupage.svg'
 ];
+const shellFingerprint = (() => {
+  const payload = SHELL.join('|');
+  let hash = 0;
+  for (let i = 0; i < payload.length; i++) {
+    hash = ((hash * 31) + payload.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+})();
+const CACHE = `vt6-${shellFingerprint}`;
+const RUNTIME = 'vt6-runtime-v1';
+const RUNTIME_CDN = 'vt6-cdn-v1';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
