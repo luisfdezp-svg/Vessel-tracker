@@ -14,11 +14,14 @@ const SHELL = [
 ];
 const shellFingerprint = (() => {
   const payload = SHELL.join('|');
-  let hash = 0;
+  let hashA = 0;
+  let hashB = 5381;
   for (let i = 0; i < payload.length; i++) {
-    hash = ((hash * 31) + payload.charCodeAt(i)) >>> 0;
+    const ch = payload.charCodeAt(i);
+    hashA = ((hashA * 31) + ch) >>> 0;
+    hashB = (((hashB << 5) + hashB) + ch) >>> 0;
   }
-  return hash.toString(36);
+  return `${hashA.toString(36)}-${hashB.toString(36)}-${payload.length.toString(36)}`;
 })();
 const CACHE = `vt6-${shellFingerprint}`;
 const RUNTIME = 'vt6-runtime-v1';

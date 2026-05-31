@@ -11,6 +11,7 @@ def signingKeystore = envOrNull("SIGNING_KEYSTORE")
 def signingStorePassword = envOrNull("SIGNING_KEYSTORE_PASSWORD")
 def signingKeyAlias = envOrNull("SIGNING_KEY_ALIAS")
 def signingKeyPassword = envOrNull("SIGNING_KEY_PASSWORD")
+def versionCodeEnv = envOrNull("VERSION_CODE")
 def hasReleaseSigning = [signingKeystore, signingStorePassword, signingKeyAlias, signingKeyPassword].every { it != null }
 def defaultVersionCode = 1
 
@@ -22,7 +23,7 @@ android {
         applicationId "com.luisfdezp.groupage"
         minSdk 26
         targetSdk 34
-        versionCode (envOrNull("VERSION_CODE") ?: defaultVersionCode.toString()).toInteger()
+        versionCode (versionCodeEnv ?: defaultVersionCode.toString()).toInteger()
         versionName envOrNull("VERSION_NAME") ?: "1.0.0-dev"
     }
 
@@ -59,6 +60,9 @@ android {
         def releaseRequested = graph.allTasks.any { t -> t.name.toLowerCase().contains('release') }
         if (releaseRequested && !hasReleaseSigning) {
             throw new GradleException("Release build requires signing env vars: SIGNING_KEYSTORE, SIGNING_KEYSTORE_PASSWORD, SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD")
+        }
+        if (releaseRequested && versionCodeEnv == null) {
+            throw new GradleException("Release build requires VERSION_CODE env var")
         }
     }
 
