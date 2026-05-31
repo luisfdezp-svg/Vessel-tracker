@@ -1,20 +1,19 @@
-const CACHE = 'vt6-v13';
+const CACHE = 'vt6-v14';
+const RUNTIME = 'vt6-runtime-v1';
+const RUNTIME_CDN = 'vt6-cdn-v1';
 const SHELL = [
   './',
   './index.html',
   './vessel-tracker.html',
   './Groupage Optimizer.html',
+  './assets/css/vessel-tracker.css',
+  './assets/js/vessel-tracker.js',
+  './assets/css/groupage-optimizer.css',
+  './assets/js/groupage-optimizer.js',
   './manifest.json',
   './manifest-groupage.json',
   './icon.svg',
-  './icon-groupage.svg',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
-  'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+  './icon-groupage.svg'
 ];
 
 self.addEventListener('install', e => {
@@ -29,7 +28,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => ![CACHE,RUNTIME,RUNTIME_CDN].includes(k)).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -37,11 +36,26 @@ self.addEventListener('activate', e => {
 function isBypass(url) {
   if (url.protocol === 'ws:' || url.protocol === 'wss:') return true;
   const h = url.hostname;
-  return h.includes('aisstream')
-    || h.includes('emailjs')
-    || h.includes('basemaps.cartocdn')
-    || h.includes('tile.openstreetmap')
-    || h.includes('arcgisonline');
+  return h === 'stream.aisstream.io'
+    || h === 'api.emailjs.com'
+    || h === 'basemaps.cartocdn.com'
+    || h === 'tile.openstreetmap.org'
+    || h === 'server.arcgisonline.com';
+}
+
+function isCdnAsset(url) {
+  const h = url.hostname;
+  return h === 'cdnjs.cloudflare.com' || h === 'cdn.jsdelivr.net';
+}
+
+async function pruneCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length <= maxEntries) return;
+  const extras = keys.length - maxEntries;
+  for (let i = 0; i < extras; i++) {
+    await cache.delete(keys[i]);
+  }
 }
 
 self.addEventListener('fetch', e => {
@@ -49,12 +63,27 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (isBypass(url)) return;
 
+  if (isCdnAsset(url)) {
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(RUNTIME_CDN).then(c => c.put(e.request, copy)).then(() => pruneCache(RUNTIME_CDN, 80));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then(hit => {
       const fetchPromise = fetch(e.request).then(res => {
         if (res && res.ok) {
           const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
+          caches.open(RUNTIME).then(c => c.put(e.request, copy)).then(() => pruneCache(RUNTIME, 120));
         }
         return res;
       }).catch(() => hit || caches.match('./vessel-tracker.html') || caches.match('./index.html'));

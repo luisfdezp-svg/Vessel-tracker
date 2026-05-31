@@ -1,24 +1,24 @@
-# Keystore de firma (dev)
+# Keystore de firma (seguridad)
 
-Este keystore `release.jks` firma el APK de **Groupage**.
+El keystore **ya no se versiona en el repositorio**.
+La firma del APK de **Groupage** se inyecta desde GitHub Secrets durante CI.
 
-## Credenciales (defaults)
+## Secrets requeridos en GitHub Actions
 
-- **Keystore password:** `groupage2026`
-- **Key alias:** `groupage`
-- **Key password:** `groupage2026`
-- **Validez:** 10 000 días (≈ 27 años)
-- **Algoritmo:** RSA 2048, SHA384withRSA
+- `SIGNING_KEYSTORE_BASE64` → contenido base64 del `.jks`
+- `SIGNING_KEYSTORE_PASSWORD`
+- `SIGNING_KEY_ALIAS`
+- `SIGNING_KEY_PASSWORD`
 
-Son **valores por defecto para desarrollo/distribución privada**. Si vas a
-publicar en Google Play:
+## Rotación recomendada
 
-1. Genera un nuevo keystore fuera del repo (no commitees passwords).
-2. Guarda el keystore en un gestor seguro (1Password, Bitwarden, etc.).
-3. Configura los GitHub Secrets `SIGNING_KEYSTORE_PASSWORD`,
-   `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD` en el repo (Settings →
-   Secrets and variables → Actions). El workflow ya los lee por prioridad
-   sobre los defaults.
+1. Genera el keystore fuera del repositorio.
+2. Convierte a base64:
+   ```bash
+   base64 -w 0 release.jks > release.jks.b64
+   ```
+3. Actualiza los 4 secrets en GitHub.
+4. Ejecuta el workflow Android manual con una build de prueba.
 
 ## Regenerar
 
@@ -31,8 +31,8 @@ keytool -genkey -v \
   -dname "CN=Groupage, OU=Dev, O=luisfdezp, L=-, ST=-, C=ES"
 ```
 
-## Huella del certificado actual
+## Verificar huella localmente
 
 ```bash
-keytool -list -v -keystore release.jks -storepass groupage2026 | grep 'SHA'
+keytool -list -v -keystore release.jks -storepass PASSWORD | grep 'SHA'
 ```

@@ -31,7 +31,8 @@ cd android-app
 # APK firmado → app/build/outputs/apk/release/app-release.apk
 ```
 
-El keystore de firma está en `keystore/release.jks` (dev).
+La firma de release en CI requiere secrets (ver `keystore/README.md`);
+el keystore no se guarda en el repositorio.
 
 ## Instalar el APK
 
@@ -66,8 +67,7 @@ android-app/
 ├── settings.gradle
 ├── gradle.properties
 └── keystore/
-    ├── release.jks                  clave de firma (dev)
-    └── README.md                    credenciales + rotación
+    └── README.md                    política de firma y rotación
 ```
 
 ## Actualizar la app al cambiar el HTML
