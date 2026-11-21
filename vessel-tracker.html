@@ -43,6 +43,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,
 .pbody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 14px 14px;max-height:calc(65vh - 44px)}
 
 /* DESKTOP LAYOUT */
+/* Movil: baja los controles del mapa (zoom, capas) por debajo de la cabecera fija */
+@media(max-width:767px){.leaflet-top{top:calc(env(safe-area-inset-top) + 52px)}}
 @media(min-width:768px){
   .app{flex-direction:row}
   .topbar{display:none}
