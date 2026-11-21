@@ -101,7 +101,7 @@ button{display:block;width:100%;border-radius:8px;padding:10px;font-family:inher
 <div class="sidebar">
   <div class="sb-head">
     <div style="display:flex;align-items:center;justify-content:space-between">
-      <div><h1>⚓ Vessel Tracker</h1><div style="font-size:9px;color:var(--dim)">AIS + Manual · <span id="sD">OFF</span></div></div>
+      <div><h1>⚓ Vessel Tracker</h1><div style="font-size:9px;color:var(--dim)">AIS + Manual · <span id="sD">OFF</span> · <span class="offl" id="offD"></span></div></div>
       <span class="badge" id="sBD" style="background:#7f1d1d;color:var(--red)">OFF</span>
     </div>
   </div>
@@ -113,7 +113,7 @@ button{display:block;width:100%;border-radius:8px;padding:10px;font-family:inher
 
 <!-- TOPBAR (Mobile) -->
 <div class="topbar">
-  <div><h1>⚓ Vessel Tracker</h1><div class="sub"><span id="sM">OFF</span></div></div>
+  <div><h1>⚓ Vessel Tracker</h1><div class="sub"><span id="sM">OFF</span> · <span class="offl" id="offM"></span></div></div>
   <span class="badge" id="sBM" style="background:#7f1d1d;color:var(--red)">OFF</span>
 </div>
 
@@ -523,11 +523,25 @@ function doInstall(){
   _deferredInst.prompt();
   _deferredInst.userChoice.then(function(){_deferredInst=null;var c=document.getElementById('instCard');if(c)c.style.display='none';});
 }
+// Estado "uso sin red": comprueba que el tracker y Leaflet están en caché.
+function setOffl(txt,col,tip){['offD','offM'].forEach(function(id){var e=document.getElementById(id);if(e){e.textContent=txt;e.style.color=col;e.title=tip;}});}
+function checkOffl(){
+  if(!('serviceWorker' in navigator)||!window.isSecureContext){setOffl('sin offline','var(--red)','Este navegador o dirección no permite uso sin red (requiere HTTPS)');return Promise.resolve(false);}
+  if(!('caches' in window)){setOffl('sin offline','var(--red)','Cache API no disponible');return Promise.resolve(false);}
+  return Promise.all([caches.match('./vessel-tracker.html'),caches.match('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js')]).then(function(r){
+    var ok=!!(r[0]&&r[1]);
+    if(ok)setOffl('✓ offline listo','var(--green)','La app está guardada en este dispositivo: abrirá sin servidor ni red (sin mapa de fondo ni AIS)');
+    else setOffl('preparando offline…','var(--amber)','Mantén la app abierta con red unos segundos');
+    return ok;
+  }).catch(function(){setOffl('sin offline','var(--red)','No se pudo leer la caché');return false;});
+}
 if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='sw-ready')checkOffl();});
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('./sw.js').then(function(r){_swReg=r;}).catch(function(){});
+    var n=0;(function poll(){checkOffl().then(function(ok){if(!ok&&++n<20)setTimeout(poll,1500);});})();
   });
-}
+}else{window.addEventListener('load',checkOffl);}
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_deferredInst=e;var c=document.getElementById('instCard');if(c)c.style.display='block';});
 window.addEventListener('appinstalled',function(){_deferredInst=null;var c=document.getElementById('instCard');if(c)c.style.display='none';});
 

@@ -102,8 +102,27 @@ footer a:hover{color:var(--text)}
   </section>
 
   <footer>
+    <div id="offStatus" style="margin-bottom:6px;font-size:12px"></div>
     Código en <a href="https://github.com/luisfdezp-svg/vessel-tracker" target="_blank" rel="noopener">GitHub</a>
   </footer>
 </div>
+<script>
+// Registra el service worker desde la portada para que la app quede guardada
+// en el dispositivo aunque no se abra antes el tracker (iPhone: pantalla de inicio).
+(function(){
+  var el=document.getElementById('offStatus');
+  function msg(t,c){if(el){el.textContent=t;el.style.color=c;}}
+  if(!('serviceWorker' in navigator)||!window.isSecureContext){msg('Uso sin red no disponible en esta dirección (requiere HTTPS).','#e05252');return;}
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){msg('No se pudo activar el uso sin red.','#e05252');});
+    var n=0;(function poll(){
+      caches.match('./vessel-tracker.html').then(function(h){
+        if(h)msg('✓ Guardada en este dispositivo: abrirá sin red.','#3ccf7a');
+        else{msg('Preparando uso sin red…','#e0a030');if(++n<20)setTimeout(poll,1500);}
+      }).catch(function(){});
+    })();
+  });
+})();
+</script>
 </body>
 </html>

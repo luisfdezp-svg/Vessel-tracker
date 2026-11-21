@@ -1,4 +1,4 @@
-const CACHE = 'vt6-v13';
+const CACHE = 'vt6-v14';
 const SHELL = [
   './',
   './index.html',
@@ -31,6 +31,8 @@ self.addEventListener('activate', e => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(list => list.forEach(c => c.postMessage({ type: 'sw-ready', cache: CACHE })))
   );
 });
 
@@ -48,19 +50,33 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (isBypass(url)) return;
+  const isNav = e.request.mode === 'navigate';
 
-  e.respondWith(
-    caches.match(e.request).then(hit => {
-      const fetchPromise = fetch(e.request).then(res => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
-        }
-        return res;
-      }).catch(() => hit || caches.match('./vessel-tracker.html') || caches.match('./index.html'));
-      return hit || fetchPromise;
-    })
-  );
+  // Cache-first + revalidación en segundo plano. Si no hay caché ni red:
+  // navegaciones -> tracker (o portada) cacheados; resto -> error de red.
+  e.respondWith((async () => {
+    const hit = await caches.match(e.request, { ignoreSearch: isNav });
+    const net = fetch(e.request).then(res => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy));
+      }
+      return res;
+    });
+    if (hit) {
+      e.waitUntil(net.catch(() => null));
+      return hit;
+    }
+    try {
+      return await net;
+    } catch (err) {
+      if (isNav) {
+        const fb = (await caches.match('./vessel-tracker.html')) || (await caches.match('./index.html'));
+        if (fb) return fb;
+      }
+      return Response.error();
+    }
+  })());
 });
 
 self.addEventListener('message', e => {
